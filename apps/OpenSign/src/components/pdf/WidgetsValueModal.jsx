@@ -27,9 +27,9 @@ import {
   getBase64MimeType,
   drawWidget,
   getBase64FromUrl,
-  clearResponse
+  clearResponse,
+  isEmptyValue
 } from "../../constant/Utils";
-import CellsWidget from "./CellsWidget";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import moment from "moment";
@@ -61,6 +61,7 @@ import UploadImage from "./tab/UploadImage";
 import TypeSignature from "./tab/TypeSignature";
 import PenColorComponent from "./tab/PenColorComponent";
 import TextInput from "./widgets/TextInput";
+import CellsInput from "./widgets/CellsInput";
 
 const fontOptions = [
   { value: "Fasthand" },
@@ -95,8 +96,6 @@ function WidgetsValueModal(props) {
     setXyPosition,
     isSave,
     signatureTypes,
-    setCellCount,
-    allowCellResize = true,
     penColors
   } = props;
   const previousWidgetRes = signatureResponse?.find(
@@ -162,45 +161,21 @@ function WidgetsValueModal(props) {
     );
   });
   const blocked = [
-    "checkbox",
-    "dropdown",
-    "date",
-    "radio",
   ];
   const blockedTab = ["mysignature", "myinitials", "myStamp"];
   const showClearbtn =
     (!blocked.includes(type) && !blockedTab.includes(isTab));
-  const [cellsValue, setCellsValue] = useState(() => {
-    const count = currWidgetsDetails?.options?.cellCount || 5;
-    const val =
-      currWidgetsDetails?.options?.response ||
-      currWidgetsDetails?.options?.defaultValue ||
-      "";
-    return Array.from({ length: count }, (_, i) => val[i] || "");
-  });
   const isSignOrInitials = ["signature", "initials"].includes(
     currWidgetsDetails?.type
   );
   const isImageOrStamp = ["image", "stamp"].includes(currWidgetsDetails?.type);
-  const cellRefs = useRef([]);
   const widgetRef = useRef(null);
-  // keep track of the first empty cell to automatically focus it after updates
   useEffect(() => {
-    const index = cellsValue.findIndex((v) => !v);
-    if (index !== -1) {
-      setTimeout(() => {
-        cellRefs.current[index]?.focus();
-      }, 0);
-    }
-  }, [cellsValue]);
-
-  useEffect(() => {
-    const count = currWidgetsDetails?.options?.cellCount || 5;
     const val =
       currWidgetsDetails?.options?.response ||
       currWidgetsDetails?.options?.defaultValue ||
       "";
-    setCellsValue(Array.from({ length: count }, (_, i) => val[i] || ""));
+    setWidgetValue(String(val || ""));
   }, [currWidgetsDetails?.key, currWidgetsDetails?.options?.cellCount]);
   useEffect(() => {
     dispatch(setScrollTriggerId(currWidgetsDetails?.key));
@@ -225,9 +200,14 @@ function WidgetsValueModal(props) {
 
   useEffect(() => {
     if (
-      ["name", "email", "job title", "company", textInputWidget].includes(
-        currWidgetsDetails?.type
-      )
+      [
+        "name",
+        "email",
+        "job title",
+        "company",
+        textInputWidget,
+        cellsWidget
+      ].includes(currWidgetsDetails?.type)
     ) {
       if (currWidgetsDetails?.options?.hint) {
         setHint(currWidgetsDetails?.options.hint);
@@ -240,6 +220,7 @@ function WidgetsValueModal(props) {
         setHint(currWidgetsDetails?.type);
       }
     }
+
     else if (currWidgetsDetails?.type === "date") {
       setHint(currWidgetsDetails?.options.hint || "");
     } else if (isSignOrInitials) {
@@ -295,6 +276,10 @@ function WidgetsValueModal(props) {
       uniqueId,
       false,
       data?.format,
+      currWidgetsDetails?.options?.fontSize,
+      currWidgetsDetails?.options?.fontColor,
+      null,
+      null,
     );
     setSelectDate({ date: date, format: data?.format });
   };
@@ -608,14 +593,9 @@ function WidgetsValueModal(props) {
       }
     } else {
       if (currWidgetsDetails?.type === cellsWidget) {
-        const count =
-          currWidgetsDetails?.options?.cellCount || cellsValue.length || 1;
-        const cleared = Array.from({ length: count }, () => "");
-        setCellsValue(cleared);
-        const combined = cleared.join("");
-        setWidgetValue(combined);
+        setWidgetValue("");
         onChangeInput(
-          combined,
+          "",
           currWidgetsDetails,
           xyPosition,
           props.index,
@@ -623,7 +603,9 @@ function WidgetsValueModal(props) {
           uniqueId
         );
       } else {
+        setSelectedCheckbox([]);
         setWidgetValue("");
+        setStartDate("");
         onChangeInput(
           "",
           currWidgetsDetails,
@@ -1060,17 +1042,16 @@ function WidgetsValueModal(props) {
       uniqueId
     );
   };
+
   const updateCells = (updated) => {
-    setCellsValue(updated);
-    const combined = updated.join("");
-    setWidgetValue(combined);
+    setWidgetValue(updated);
     props.setCurrWidgetsDetails?.((prev) =>
       prev && prev.key === currWidgetsDetails?.key
-        ? { ...prev, options: { ...prev.options, response: combined } }
+        ? { ...prev, options: { ...prev.options, response: updated } }
         : prev
     );
     onChangeInput(
-      combined,
+      updated,
       currWidgetsDetails,
       xyPosition,
       props.index,
@@ -1078,37 +1059,11 @@ function WidgetsValueModal(props) {
       uniqueId
     );
   };
-  const handleCellsInput = (e, idx) => {
+  const handleCellsInput = (e) => {
+    const value = e.target.value;
     setIsShowValidation(false);
-    const val = e.target.value.slice(0, 1);
-    const updated = [...cellsValue];
-    updated[idx] = val;
-    updateCells(updated);
+    updateCells(value);
   };
-  const handleCellsKeyDown = (e, idx) => {
-    if (e.key === "Backspace" && !cellsValue[idx] && idx > 0) {
-      e.preventDefault();
-      cellRefs.current[idx - 1]?.focus();
-    }
-  };
-
-  const handleCellResize = (newCount) => {
-    let updated = [...cellsValue];
-    if (newCount > updated.length) {
-      updated = [...updated, ...Array(newCount - updated.length).fill("")];
-    } else if (newCount < updated.length) {
-      updated = updated.slice(0, newCount);
-    }
-    cellRefs.current = cellRefs.current.slice(0, newCount);
-    updateCells(updated);
-    setCellCount?.(currWidgetsDetails?.key, newCount);
-  };
-
-  // when focus leaves the cells widget, validate the input
-  const handleCellsBlur = (e, idx) => {
-    handleInputBlur();
-  };
-
   //function is used to show widgets on modal according to selected widget type checkbox/date/radio/drodown/textbox/signature/image
   const getWidgetType = (type) => {
     const isStampOrImage =
@@ -1360,6 +1315,7 @@ function WidgetsValueModal(props) {
         )
       }
     ];
+
     switch (type) {
       case "image":
       case "initials":
@@ -1464,24 +1420,18 @@ function WidgetsValueModal(props) {
             handleOnchangeTextBox={handleOnchangeTextBox}
             textInputcls={textInputcls}
             currWidgetsDetails={currWidgetsDetails}
-            handleInputBlur={handleInputBlur}
+            handleInputBlur={handleValidation}
           />
         );
       case cellsWidget:
         return (
-          <CellsWidget
-            isEnabled={true}
-            count={cellsValue.length}
-            height="100%"
-            value={cellsValue.join("")}
-            editable={true}
-            resizable={allowCellResize}
-            onChange={handleCellsInput}
-            onKeyDown={handleCellsKeyDown}
-            onBlur={handleCellsBlur}
-            onCellCountChange={allowCellResize ? handleCellResize : undefined}
-            inputRefs={cellRefs}
+          <CellsInput
+            cellsValue={widgetValue}
+            handleCellsInput={handleCellsInput}
+            textInputcls={textInputcls}
+            handleValidation={handleValidation}
             hint={hint}
+            count={currWidgetsDetails?.options?.cellCount || 0}
           />
         );
       case "dropdown":
@@ -1511,7 +1461,7 @@ function WidgetsValueModal(props) {
             type="text"
             placeholder={hint || widgetTypeTranslation}
             value={widgetValue}
-            onBlur={handleInputBlur}
+            onBlur={handleValidation}
             onChange={(e) => handleOnchangeTextBox(e)}
             className={textInputcls}
           />
@@ -1523,7 +1473,7 @@ function WidgetsValueModal(props) {
             placeholder={hint || widgetTypeTranslation}
             value={widgetValue}
             type="text"
-            onBlur={handleInputBlur}
+            onBlur={handleValidation}
             onChange={(e) => handleOnchangeTextBox(e)}
             className={textInputcls}
           />
@@ -1533,7 +1483,7 @@ function WidgetsValueModal(props) {
           <input
             ref={widgetRef}
             type="text"
-            onBlur={handleInputBlur}
+            onBlur={handleValidation}
             placeholder={hint || widgetTypeTranslation}
             value={widgetValue}
             onChange={(e) => handleOnchangeTextBox(e)}
@@ -1607,7 +1557,7 @@ function WidgetsValueModal(props) {
           <input
             ref={widgetRef}
             type="email"
-            onBlur={handleInputBlur}
+            onBlur={handleValidation}
             placeholder={hint || widgetTypeTranslation}
             value={widgetValue}
             onChange={(e) => handleOnchangeTextBox(e)}
@@ -1773,7 +1723,7 @@ function WidgetsValueModal(props) {
     }
   };
   //function is used when user enter value in any textbox then check validation
-  const handleInputBlur = () => {
+  const handleValidation = () => {
     const validateType = currWidgetsDetails?.options?.validation?.type;
     let regexValidation;
     switch (validateType) {
@@ -1938,10 +1888,10 @@ function WidgetsValueModal(props) {
         selectedCheckbox?.length > 0
       ) {
         return false;
-      } else if (widgetValue) {
-        return false;
-      } else {
+      } else if (isEmptyValue(widgetValue)) {
         return true;
+      } else {
+        return false;
       }
     } else {
       return true;

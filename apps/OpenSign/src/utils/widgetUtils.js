@@ -8,7 +8,8 @@ import {
   radioButtonWidget,
   textInputWidget,
   textWidget,
-  cellsWidget
+  cellsWidget,
+  addWidgetOptions
 } from "../constant/Utils";
 import { base64StringtoFile, uploadFile } from "./fileUtils";
 import { sanitizeFileName } from "./sanitizeFileName";
@@ -104,6 +105,43 @@ export const hasDuplicateWidgetNames = (placeholders = []) => {
   }
 
   return false;
+};
+
+// `createCustomPositionWidget` builds a dropObj and placeHolder for a widget placed
+// via click-and-drag drawing (i.e. when customOptions.customPosition is provided).
+// Returns { dropObj, placeHolder } where placeHolder.pos === [dropObj].
+export const createCustomPositionWidget = ({
+  customPosition,
+  key,
+  containerScale,
+  posZIndex,
+  dragTypeValue,
+  pageNumber,
+  owner,
+  signerPlaceHolder,
+  roleName
+}) => {
+  const { xPosition, yPosition, width, height } = customPosition;
+  const dropObj = {
+    xPosition,
+    yPosition,
+    isStamp: false,
+    key,
+    scale: containerScale,
+    zIndex: posZIndex,
+    type: dragTypeValue,
+    options: addWidgetOptions(
+      dragTypeValue,
+      owner,
+      signerPlaceHolder,
+      roleName
+    ),
+    Width: width,
+    Height: height
+  };
+  const dropData = [dropObj];
+  const placeHolder = { pageNumber, pos: dropData };
+  return { dropObj, placeHolder };
 };
 
 /**

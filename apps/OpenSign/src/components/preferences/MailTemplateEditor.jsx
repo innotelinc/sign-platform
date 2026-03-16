@@ -1,27 +1,28 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import Parse from "parse";
-// import ReactQuill from "react-quill-new";
-// import "../../styles/quill.css";
-// import EditorToolbar, { module1, module2, formats } from "../pdf/EditorToolbar";
 import Tooltip from "../../primitives/Tooltip";
 import Alert from "../../primitives/Alert";
 import Loader from "../../primitives/Loader";
 import { withSessionValidation } from "../../utils";
-import EmailBodyEditor from "../EmailBodyEditor";
 import { useDispatch } from "react-redux";
 import { setTenantInfo, setUserInfo } from "../../redux/reducers/userReducer";
+import EmailEditor from "../emaileditor";
 
 const MailTemplateEditor = ({
   info,
   tenantId,
 }) => {
-  const appName = localStorage.getItem("appname") || "OpenSign™";
+  const appName =
+    "OpenSign™";
   const { t } = useTranslation();
   const dispatch = useDispatch();
-  const [requestBody, setRequestBody] = useState("");
+  const [requestBody, setRequestBody] = useState({ basic: "", advanced: "" });
   const [requestSubject, setRequestSubject] = useState("");
-  const [completionBody, setCompletionBody] = useState("");
+  const [completionBody, setCompletionBody] = useState({
+    basic: "",
+    advanced: ""
+  });
   const [completionSubject, setCompletionSubject] = useState("");
   const [isTemplateLoaded, setIsTemplateLoaded] = useState(false);
   const [isDefaultMail, setIsDefaultMail] = useState({
@@ -33,6 +34,10 @@ const MailTemplateEditor = ({
     completion: false
   });
   const [isalert, setIsAlert] = useState({ type: "success", msg: "" });
+  const [editorType, setEditorType] = useState({
+    request: "basic",
+    completion: "basic"
+  });
   const defaultRequestSubject = `{{sender_name}} has requested you to sign {{document_title}}`;
   const defaultRequestBody = `<p>Hi {{receiver_name}},</p><br><p>We hope this email finds you well. {{sender_name}}&nbsp;has requested you to review and sign&nbsp;{{document_title}}.</p><p>Your signature is crucial to proceed with the next steps as it signifies your agreement and authorization.</p><br><p><a href='{{signing_url}}' rel='noopener noreferrer' target='_blank'>Sign here</a></p><br><br><p>If you have any questions or need further clarification regarding the document or the signing process, please contact the sender.</p><br><p>Thanks</p><p> Team ${appName}</p><br>`;
   const defaultCompletionSubject = `Document {{document_title}} has been signed by all parties`;
@@ -63,23 +68,44 @@ const MailTemplateEditor = ({
       const updateRes = tenantRes;
       const defaultRequestBody = `<p>Hi {{receiver_name}},</p><br><p>We hope this email finds you well. {{sender_name}}&nbsp;has requested you to review and sign&nbsp;{{document_title}}.</p><p>Your signature is crucial to proceed with the next steps as it signifies your agreement and authorization.</p><br><p><a href='{{signing_url}}' rel='noopener noreferrer' target='_blank'>Sign here</a></p><br><br><p>If you have any questions or need further clarification regarding the document or the signing process, please contact the sender.</p><br><p>Thanks</p><p> Team ${appName}</p><br>`;
       if (updateRes?.RequestBody) {
-        setRequestBody(updateRes?.RequestBody);
+        setRequestBody((p) => ({
+          ...p,
+          basic: updateRes?.RequestBody,
+          advanced: updateRes?.RequestBody
+        }));
         setRequestSubject(updateRes?.RequestSubject);
         setIsDefaultMail((prev) => ({ ...prev, requestMail: false }));
       } else {
-        setRequestBody(defaultRequestBody);
+        setRequestBody((p) => ({
+          ...p,
+          basic: defaultRequestBody,
+          advanced: defaultRequestBody
+        }));
         setRequestSubject(defaultRequestSubject);
         setIsDefaultMail((prev) => ({ ...prev, requestMail: true }));
       }
       if (updateRes?.CompletionBody) {
-        setCompletionBody(updateRes?.CompletionBody);
+        setCompletionBody((p) => ({
+          ...p,
+          basic: updateRes?.CompletionBody,
+          advanced: updateRes?.CompletionBody
+        }));
         setCompletionSubject(updateRes?.CompletionSubject);
         setIsDefaultMail((prev) => ({ ...prev, completionMail: false }));
       } else {
-        setCompletionBody(defaultCompletionBody);
+        setCompletionBody((p) => ({
+          ...p,
+          basic: defaultCompletionBody,
+          advanced: defaultCompletionBody
+        }));
         setCompletionSubject(defaultCompletionSubject);
         setIsDefaultMail((prev) => ({ ...prev, completionMail: true }));
       }
+      setEditorType((p) => ({
+        ...p,
+        request: updateRes?.EmailEditorType?.request || "basic",
+        completion: updateRes?.EmailEditorType?.completion || "basic"
+      }));
       setIsTemplateLoaded((prev) => !prev);
     }
   };
@@ -90,25 +116,35 @@ const MailTemplateEditor = ({
     const updatedInfo = { ...info };
     updatedInfo[subject] = response?.[subject] ?? "";
     updatedInfo[body] = response?.[body] ?? "";
+    updatedInfo.EmailEditorType = response?.EmailEditorType;
     dispatch(action(updatedInfo));
   };
   //function to save completion email template
   const handleSaveCompletionEmail = withSessionValidation(async (e) => {
     e.preventDefault();
     try {
-      const replacedHtmlBody = completionBody.replace(/"/g, "'");
+      const replacedHtmlBody = completionBody[editorType.completion]?.replace(
+        /"/g,
+        "'"
+      );
       const htmlBody = `<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8' /></head><body>${replacedHtmlBody}</body></html>`;
       const updateTenant = await Parse.Cloud.run(cloudfunction, {
         tenantId: tenantId,
         details: {
           CompletionBody: htmlBody,
-          CompletionSubject: completionSubject
+          CompletionSubject: completionSubject,
+          EmailEditorType: editorType
         }
       });
       if (updateTenant) {
         const updateRes = JSON.parse(JSON.stringify(updateTenant));
-        setCompletionBody(updateRes?.CompletionBody);
+        setCompletionBody((p) => ({
+          ...p,
+          basic: updateRes?.CompletionBody,
+          advanced: updateRes?.CompletionBody
+        }));
         setCompletionSubject(updateRes?.CompletionSubject);
+        setEditorType(updateRes?.EmailEditorType);
         updateValuesInRedux("CompletionSubject", "CompletionBody", updateRes);
         setIsAlert({ type: "success", msg: t("saved-successfully") });
         setTimeout(() => setIsAlert({ type: "", msg: "" }), 1500);
@@ -123,22 +159,36 @@ const MailTemplateEditor = ({
   const handleSaveRequestEmail = withSessionValidation(async (e) => {
     e.preventDefault();
     try {
-      const replacedHtmlBody = requestBody.replace(/"/g, "'");
+      const replacedHtmlBody = requestBody[editorType.request]?.replace(
+        /"/g,
+        "'"
+      );
+
       const htmlBody = `<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8' /></head><body>${replacedHtmlBody}</body></html>`;
       const updateTenant = await Parse.Cloud.run(cloudfunction, {
         tenantId: tenantId,
-        details: { RequestBody: htmlBody, RequestSubject: requestSubject }
+        details: {
+          RequestBody: htmlBody,
+          RequestSubject: requestSubject,
+          EmailEditorType: editorType
+        }
       });
       if (updateTenant) {
         const updateRes = JSON.parse(JSON.stringify(updateTenant));
-        setRequestBody(updateRes?.RequestBody);
+        setRequestBody((p) => ({
+          ...p,
+          basic: updateRes?.RequestBody,
+          advanced: updateRes?.RequestBody
+        }));
         setRequestSubject(updateRes?.RequestSubject);
+        setEditorType(updateRes?.EmailEditorType);
         let extUser =
           localStorage.getItem("Extand_Class") &&
           JSON.parse(localStorage.getItem("Extand_Class"))?.[0];
         if (extUser && extUser?.objectId) {
             extUser.TenantId.RequestBody = updateRes?.RequestBody;
             extUser.TenantId.RequestSubject = updateRes?.RequestSubject;
+            extUser.TenantId.EmailEditorType = updateRes?.EmailEditorType;
           const _extUser = JSON.parse(JSON.stringify(extUser));
           localStorage.setItem("Extand_Class", JSON.stringify([_extUser]));
         }
@@ -160,22 +210,41 @@ const MailTemplateEditor = ({
       JSON.parse(localStorage.getItem("Extand_Class"))?.[0];
     handleModifyMail(request);
     if (request && !isDefaultMail?.requestMail) {
-      setRequestBody(defaultRequestBody);
+      const emailEditor = {
+        request: "basic",
+        completion: editorType.completion
+      };
+      setRequestBody((p) => ({
+        ...p,
+        basic: defaultRequestBody,
+        advanced: defaultRequestBody
+      }));
+      setEditorType((p) => ({ ...p, request: "basic" }));
       setRequestSubject(defaultRequestSubject);
       setIsMailLoader((p) => ({ ...p, request: true }));
       try {
         await Parse.Cloud.run(cloudfunction, {
           tenantId: tenantId,
-          details: { RequestBody: "", RequestSubject: "" }
+          details: {
+            RequestBody: "",
+            RequestSubject: "",
+            EmailEditorType: emailEditor
+          }
         });
 
         if (extUser && extUser?.objectId) {
             extUser.TenantId.RequestBody = "";
             extUser.TenantId.RequestSubject = "";
+            extUser.TenantId.EmailEditorType = emailEditor;
           const _extUser = JSON.parse(JSON.stringify(extUser));
           localStorage.setItem("Extand_Class", JSON.stringify([_extUser]));
           dispatch(
-            setUserInfo({ ...info, RequestSubject: "", RequestBody: "" })
+            setUserInfo({
+              ...info,
+              RequestSubject: "",
+              RequestBody: "",
+              EmailEditorType: emailEditor
+            })
           );
         }
       } catch (err) {
@@ -184,21 +253,37 @@ const MailTemplateEditor = ({
         setIsMailLoader((p) => ({ ...p, request: false }));
       }
     } else if (completion && !isDefaultMail?.completionMail) {
+      const emailEditor = { request: editorType.request, completion: "basic" };
       setCompletionSubject(defaultCompletionSubject);
-      setCompletionBody(defaultCompletionBody);
+      setCompletionBody((p) => ({
+        ...p,
+        basic: defaultCompletionBody,
+        advanced: defaultCompletionBody
+      }));
+      setEditorType((p) => ({ ...p, completion: "basic" }));
       setIsMailLoader((p) => ({ ...p, completion: true }));
       try {
         await Parse.Cloud.run(cloudfunction, {
           tenantId: tenantId,
-          details: { CompletionBody: "", CompletionSubject: "" }
+          details: {
+            CompletionBody: "",
+            CompletionSubject: "",
+            EmailEditorType: emailEditor
+          }
         });
         if (extUser && extUser?.objectId) {
             extUser.TenantId.CompletionBody = "";
             extUser.TenantId.CompletionSubject = "";
+            extUser.TenantId.EmailEditorType = emailEditor;
           const _extUser = JSON.parse(JSON.stringify(extUser));
           localStorage.setItem("Extand_Class", JSON.stringify([_extUser]));
           dispatch(
-            setUserInfo({ ...info, CompletionSubject: "", CompletionBody: "" })
+            setUserInfo({
+              ...info,
+              CompletionSubject: "",
+              CompletionBody: "",
+              EmailEditorType: emailEditor
+            })
           );
         }
       } catch (err) {
@@ -209,16 +294,21 @@ const MailTemplateEditor = ({
     }
   });
   //function for handle ontext change and save again text in delta
-  const handleOnchangeRequest = (html) => {
-    if (html) {
-      setRequestBody(html);
-    }
+  const handleOnchangeRequest = (newValue, changedType) => {
+    setRequestBody((prev) => ({ ...prev, [changedType]: newValue }));
   };
-  const handleOnchangeCompletion = (html) => {
-    if (html) {
-      setCompletionBody(html);
-    }
+
+  const handleOnchangeCompletion = (newValue, changedType) => {
+    setCompletionBody((prev) => ({ ...prev, [changedType]: newValue }));
   };
+
+  const handleSwitch = (e, flow) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const editor = editorType[flow] === "basic" ? "advanced" : "basic";
+    setEditorType((p) => ({ ...p, [flow]: editor }));
+  };
+
   return (
     <>
       {isalert.msg && <Alert type={isalert.type}>{isalert.msg}</Alert>}
@@ -266,24 +356,26 @@ const MailTemplateEditor = ({
                 />
               </div>
               <div className="text-lg font-normal py-2">
-                <label className="text-sm mt-3">
-                  {t("body")}{" "}
-                  <Tooltip
-                    id={"request-body-tooltip"}
-                    message={`${t("variables-use")}: {{document_title}} {{sender_name}}, {{sender_mail}}, {{sender_phone}}, {{receiver_name}}, {{receiver_email}}, {{receiver_phone}}, {{expiry_date}}, {{company_name}}, {{signing_url}}, {{note}}`}
-                  />
+                <label className="flex justify-between text-sm mt-3">
+                  <span>
+                    {t("body")}{" "}
+                    <Tooltip
+                      id={"request-body-tooltip"}
+                      message={`${t("variables-use")}: {{document_title}} {{sender_name}}, {{sender_mail}}, {{sender_phone}}, {{receiver_name}}, {{receiver_email}}, {{receiver_phone}}, {{expiry_date}}, {{company_name}}, {{signing_url}}, {{note}}`}
+                    />
+                  </span>
+                  <button
+                    className="op-link op-link-primary"
+                    onClick={(e) => handleSwitch(e, "request")}
+                  >
+                    {editorType.request === "basic"
+                      ? t("switch-to-advanced")
+                      : t("switch-to-basic")}
+                  </button>
                 </label>
-                {/* <EditorToolbar containerId="toolbar1" /> */}
-                {/* <ReactQuill
-                  theme="snow"
-                  value={requestBody}
-                  placeholder="add body of email"
-                  modules={module1}
-                  formats={formats}
-                  onChange={(value) => handleOnchangeRequest(value)}
-                /> */}
-                <EmailBodyEditor
-                  value={requestBody}
+                <EmailEditor
+                  type={editorType.request}
+                  values={requestBody}
                   onChange={handleOnchangeRequest}
                   bodyName="request"
                   isReset={isMailLoader?.request}
@@ -292,7 +384,7 @@ const MailTemplateEditor = ({
               </div>
               <div className="flex items-center mt-3 gap-2">
                 <button
-                  disabled={!requestBody || !requestSubject}
+                  disabled={!requestBody[editorType.request] || !requestSubject}
                   className="op-btn op-btn-primary"
                   type="submit"
                 >
@@ -350,24 +442,26 @@ const MailTemplateEditor = ({
                 />
               </div>
               <div className="text-lg font-normal py-2">
-                <label className="text-sm mt-3">
-                  {t("body")}{" "}
-                  <Tooltip
-                    id={"complete-body-tooltip"}
-                    message={`${t("variables-use")}: {{document_title}} {{sender_name}}, {{sender_mail}}, {{sender_phone}}, {{receiver_name}}, {{receiver_email}}, {{receiver_phone}}, {{company_name}}, {{signing_url}}, {{note}}`}
-                  />
+                <label className="flex justify-between text-sm mt-3">
+                  <span>
+                    {t("body")}{" "}
+                    <Tooltip
+                      id={"complete-body-tooltip"}
+                      message={`${t("variables-use")}: {{document_title}} {{sender_name}}, {{sender_mail}}, {{sender_phone}}, {{receiver_name}}, {{receiver_email}}, {{receiver_phone}}, {{company_name}}, {{signing_url}}, {{note}}`}
+                    />
+                  </span>
+                  <button
+                    className="op-link op-link-primary"
+                    onClick={(e) => handleSwitch(e, "completion")}
+                  >
+                    {editorType.completion === "basic"
+                      ? t("switch-to-advanced")
+                      : t("switch-to-basic")}
+                  </button>
                 </label>
-                {/* <EditorToolbar containerId="toolbar2" /> */}
-                {/* <ReactQuill
-                  theme="snow"
-                  value={completionBody}
-                  placeholder="add body of email"
-                  modules={module2}
-                  formats={formats}
-                  onChange={(value) => handleOnchangeCompletion(value)}
-                /> */}
-                <EmailBodyEditor
-                  value={completionBody}
+                <EmailEditor
+                  type={editorType.completion}
+                  values={completionBody}
                   onChange={handleOnchangeCompletion}
                   bodyName="completion"
                   isReset={isMailLoader?.completion}
@@ -376,7 +470,9 @@ const MailTemplateEditor = ({
               </div>
               <div className="flex items-center mt-3 gap-2">
                 <button
-                  disabled={!completionBody || !completionSubject}
+                  disabled={
+                    !completionBody[editorType.completion] || !completionSubject
+                  }
                   className="op-btn op-btn-primary"
                   type="submit"
                 >

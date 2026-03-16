@@ -35,7 +35,8 @@ import {
   handleRemoveWidgets,
   addWidgetSelfsignOptions,
   getOriginalWH,
-  signatureTypes
+  signatureTypes,
+  isEmptyValue
 } from "../constant/Utils";
 import { useParams } from "react-router";
 import Tour from "../primitives/Tour";
@@ -556,6 +557,15 @@ function SignYourSelf() {
       }));
     }
     try {
+      const currentExtUser =
+        JSON.parse(localStorage.getItem("Extand_Class") || "[]")?.[0] || {};
+      const useNameAsSender = currentExtUser?.UseNameAsSender === true;
+      const senderName =
+        pdfDetails?.[0]?.SenderName ||
+        (useNameAsSender ? currentExtUser?.Name || "" : "");
+      const senderMail =
+        pdfDetails?.[0]?.SenderMail ||
+        (useNameAsSender ? currentExtUser?.Email || "" : "");
       const docCls = new Parse.Object("contracts_Document");
       docCls.id = documentId;
       if (xyPosition?.length > 0) {
@@ -564,6 +574,12 @@ function SignYourSelf() {
       docCls.set("IsSignyourself", true);
       if (pdfUrl) {
         docCls.set("URL", pdfUrl);
+      }
+      if (senderName) {
+        docCls.set("SenderName", senderName);
+      }
+      if (senderMail) {
+        docCls.set("SenderMail", senderMail);
       }
       const res = await docCls.save();
       if (res) {
@@ -627,11 +643,15 @@ function SignYourSelf() {
             let checkSigned;
             for (let i = 0; i < requiredWidgets?.length; i++) {
               checkSigned = requiredWidgets[i]?.options?.response;
-              if (!checkSigned) {
+              if (isEmptyValue(checkSigned)) {
                 const checkSignUrl = requiredWidgets[i]?.SignUrl;
                 let checkDefaultSigned =
                   requiredWidgets[i]?.options?.defaultValue;
-                if (!checkSignUrl && !checkDefaultSigned && !showAlert) {
+                if (
+                  !checkSignUrl &&
+                  isEmptyValue(checkDefaultSigned) &&
+                  !showAlert
+                ) {
                   showAlert = true;
                   widgetKey = requiredWidgets[i]?.key;
                 }

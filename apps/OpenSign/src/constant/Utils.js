@@ -923,6 +923,13 @@ export const createDocument = async (
         }
       });
     }
+    const useNameAsSender = extClass?.[0]?.UseNameAsSender === true;
+    const senderName =
+      Doc?.SenderName || (useNameAsSender ? extClass?.[0]?.Name || "" : "");
+    const senderMail =
+      Doc?.SenderMail || (useNameAsSender ? extClass?.[0]?.Email || "" : "");
+    const SenderName = senderName ? { SenderName: senderName } : {};
+    const SenderMail = senderMail ? { SenderMail: senderMail } : {};
     const SignatureType = Doc?.SignatureType
       ? { SignatureType: Doc?.SignatureType }
       : {};
@@ -970,6 +977,8 @@ export const createDocument = async (
       DocSentAt: { __type: "Date", iso: isoDate },
       ...SignatureType,
       ...NotifyOnSignatures,
+      ...SenderName,
+      ...SenderMail,
       ...Bcc,
       ...RedirectUrl,
       ...TemplateId,
@@ -1891,6 +1900,12 @@ const forceBreakLongWord = (word, width, font, fontSize) => {
   return parts;
 };
 
+export const isEmptyValue = (val) =>
+  val === null ||
+  val === undefined ||
+  (typeof val === "string" && val.trim() === "") ||
+  (Array.isArray(val) && val.length === 0);
+
 //function for embed all type widgets in document using pdf-lib
 export const embedWidgetsToDoc = async (
   widgets,
@@ -1921,8 +1936,8 @@ export const embedWidgetsToDoc = async (
         updateItem = item.pos.filter(
           (data) =>
             data?.options?.SignUrl ||
-            data?.options?.defaultValue ||
-            data?.options?.response ||
+            !isEmptyValue(data?.options?.defaultValue) ||
+            !isEmptyValue(data?.options?.response) ||
             data?.type === "checkbox" ||
             data?.type === radioButtonWidget
         );
@@ -2134,7 +2149,7 @@ export const embedWidgetsToDoc = async (
           }
         } else if (isTextTypeWidget) {
           let textContent = "";
-          if (position?.options?.response) {
+          if (!isEmptyValue(position?.options?.response)) {
             if (
               position.type === "date" &&
               position.options?.response === "today"
@@ -2146,7 +2161,7 @@ export const embedWidgetsToDoc = async (
             } else {
               textContent = position.options?.response;
             }
-          } else if (position?.options?.defaultValue) {
+          } else if (!isEmptyValue(position?.options?.defaultValue)) {
             textContent = position?.options?.defaultValue?.toString();
           }
           if (position.type === cellsWidget) {
@@ -2293,7 +2308,11 @@ export const embedWidgetsToDoc = async (
             1,
             getSize
           );
-          const dropdownSelected = { ...dropdownOption, font: font };
+          const dropdownSelected = {
+            ...dropdownOption,
+            font: font,
+            textColor: updateColorInRgb
+          };
           dropdown.defaultUpdateAppearances(font);
           dropdown.addToPage(page, dropdownSelected);
           dropdown.enableReadOnly();
@@ -2624,9 +2643,8 @@ export const handleCopyNextToWidget = (
     const getXYdata = getPageNumer?.pos;
 
     getXYdata.push(newposition);
-
     const updatePlaceholder = xyPosition.map((obj, ind) => {
-      if (ind === index) {
+      if (obj?.pageNumber === index) {
         return { ...obj, pos: getXYdata };
       }
       return obj;
@@ -2923,14 +2941,18 @@ export const handleToPrint = async (event, setIsDownloading, pdfDetails) => {
 const downloadCertificate = async (certificate, isZip, asBlob) => {
   try {
     const appName = "OpenSign™";
-    const fetchCertificate = await fetch(certificate);
     const certificateUrl = certificate;
     if (isZip) {
       return certificateUrl;
     } else {
-      // Convert the response into a Blob
-      const blob = asBlob ? await fetchCertificate.blob() : certificateUrl;
-      saveAs(blob, `Certificate_signed_by_${appName}.pdf`);
+      if (asBlob) {
+        const fetchCertificate = await fetch(certificateUrl);
+        // Convert the response into a Blob
+        const blob = await fetchCertificate.blob();
+        saveAs(blob, `Certificate_signed_by_${appName}.pdf`);
+        return;
+      }
+      saveAs(certificateUrl, `Certificate_signed_by_${appName}.pdf`);
     }
   } catch (err) {
     console.error("download certificate err", err);
@@ -2954,7 +2976,7 @@ export const handleDownloadCertificate = async (
   };
 
   if (initialCertificateUrl) {
-    await downloadCertificate(initialCertificateUrl, isZip);
+    return await downloadCertificate(initialCertificateUrl, isZip);
   } else {
     setIsDownloading("certificate");
     try {
@@ -2964,8 +2986,9 @@ export const handleDownloadCertificate = async (
       });
       const cert = docDetails?.data?.result?.CertificateUrl;
       if (cert) {
-        await downloadCertificate(cert, isZip);
+        const certificateUrl = await downloadCertificate(cert, isZip);
         setIsDownloading("");
+        return certificateUrl;
       } else {
         const generateRes = await axios.post(
           `${baseUrl}/generatecertificate`,
@@ -2975,8 +2998,13 @@ export const handleDownloadCertificate = async (
         const certificate = generateRes?.data?.result?.CertificateUrl;
         if (certificate) {
           try {
-            await downloadCertificate(certificate, isZip, true);
+            const certificateUrl = await downloadCertificate(
+              certificate,
+              isZip,
+              true
+            );
             setIsDownloading("");
+            return certificateUrl;
           } catch (err) {
             console.error("download certificate err", err);
             setIsDownloading("certificate_err");
@@ -2991,6 +3019,7 @@ export const handleDownloadCertificate = async (
       alert(i18n.t("something-went-wrong-mssg"));
     }
   }
+  return null;
 };
 // Function to escape special characters in the search string
 export function escapeRegExp(string) {
@@ -3792,10 +3821,10 @@ export const handleCheckResponse = (checkUser, setminRequiredCount) => {
           let checkSigned;
           for (let i = 0; i < requiredWidgets?.length; i++) {
             checkSigned = requiredWidgets[i]?.options?.response;
-            if (!checkSigned) {
+            if (isEmptyValue(checkSigned)) {
               let checkDefaultSigned =
                 requiredWidgets[i]?.options?.defaultValue;
-              if (!checkDefaultSigned && !showAlert) {
+              if (isEmptyValue(checkDefaultSigned) && !showAlert) {
                 showAlert = true;
                 widgetKey = requiredWidgets[i].key;
                 tourPageNumber = updatePage;
@@ -3910,7 +3939,8 @@ export const sendEmailToSigners = async (
     year: "numeric"
   });
 
-  let senderEmail = pdfDetails?.[0]?.ExtUserPtr?.Email;
+  let senderEmail =
+    pdfDetails?.[0]?.SenderMail || pdfDetails?.[0]?.ExtUserPtr?.Email;
   let senderPhone = pdfDetails?.[0]?.ExtUserPtr?.Phone;
   let signerMail = signersdata.slice();
   if (pdfDetails?.[0]?.SendinOrder && pdfDetails?.[0]?.SendinOrder === true) {
@@ -3934,7 +3964,18 @@ export const sendEmailToSigners = async (
       const orgName = pdfDetails[0]?.ExtUserPtr.Company
         ? pdfDetails[0].ExtUserPtr.Company
         : "";
-      const senderName = pdfDetails?.[0]?.ExtUserPtr.Name;
+
+      const useNameAsSender =
+        pdfDetails?.[0]?.ExtUserPtr?.UseNameAsSender === true;
+
+      const senderName =
+        pdfDetails?.[0]?.SenderName || pdfDetails?.[0]?.ExtUserPtr?.Name;
+
+      const from =
+        pdfDetails?.[0]?.SenderName || useNameAsSender
+          ? pdfDetails?.[0]?.ExtUserPtr?.Name || ""
+          : senderEmail;
+
       const documentName = `${pdfDetails?.[0].Name}`;
       let replaceVar;
 
@@ -4002,7 +4043,7 @@ export const sendEmailToSigners = async (
           ? replaceVar?.subject
           : mailTemplate(mailparam).subject,
         replyto: senderEmail,
-        from: senderEmail,
+        from: from,
         html: replaceVar?.body ? replaceVar?.body : mailTemplate(mailparam).body
       };
 

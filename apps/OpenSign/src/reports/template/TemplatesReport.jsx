@@ -20,12 +20,6 @@ import {
   defaultMailBody,
   defaultMailSubject
 } from "../../constant/Utils";
-// import EditorToolbar, {
-//   module1,
-//   formats
-// } from "../../components/pdf/EditorToolbar";
-// import ReactQuill from "react-quill-new";
-// import "../../styles/quill.css";
 import BulkSendUi from "../../components/bulksend/BulkSendUi";
 import Loader from "../../primitives/Loader";
 import { serverUrl_fn } from "../../constant/appinfo";
@@ -40,7 +34,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { RenderReportCell } from "../../primitives/RenderReportCell";
 import CustomizeMail from "../../components/pdf/CustomizeMail";
 import { resetWidgetState } from "../../redux/reducers/widgetSlice";
-import EmailBodyEditor from "../../components/EmailBodyEditor";
+import EmailEditor from "../../components/emaileditor";
 
 const isSignExist = (placeholders = []) => {
   const isSignature =
@@ -76,7 +70,11 @@ const TemplatesReport = (props) => {
   const [isTour, setIsTour] = useState(false);
   const [tourStatusArr, setTourStatusArr] = useState([]);
   const [isResendMail, setIsResendMail] = useState({});
-  const [mail, setMail] = useState({ subject: "", body: "" });
+  const [mail, setMail] = useState({
+    subject: "",
+    body: { basic: "", advanced: "" }
+  });
+  const [emailEditorType, setEmailEditorType] = useState("basic");
   const [userDetails, setUserDetails] = useState({});
   const [isNextStep, setIsNextStep] = useState({});
   const [isBulkSend, setIsBulkSend] = useState({});
@@ -103,7 +101,10 @@ const TemplatesReport = (props) => {
   const startIndex = (currentPage - 1) * props.docPerPage;
   const { isMoreDocs, setIsNextRecord } = props;
   const [isMailModal, setIsMailModal] = useState(false);
-  const [customizeMail, setCustomizeMail] = useState({ body: "", subject: "" });
+  const [customizeMail, setCustomizeMail] = useState({
+    body: { basic: "", advanced: "" },
+    subject: ""
+  });
   const [defaultMail, setDefaultMail] = useState({ body: "", subject: "" });
   const [currUserId, setCurrUserId] = useState("");
   const [documentDetails, setDocumentDetails] = useState();
@@ -554,6 +555,13 @@ const TemplatesReport = (props) => {
     }
   };
 
+  // `handleSwitch` is used to change email editor from basic => advanced or vice versa
+  const handleSwitch = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const editor = emailEditorType === "basic" ? "advanced" : "basic";
+    setEmailEditorType(editor);
+  };
   // `handleSubjectChange` is used to add or change subject of resend mail
   const handleSubjectChange = (subject, doc) => {
     const encodeBase64 = userDetails?.objectId
@@ -571,9 +579,9 @@ const TemplatesReport = (props) => {
       document_title: doc.Name,
       note: doc?.Note || "",
       sender_name:
+        doc?.SenderName ||
         doc.ExtUserPtr.Name,
-      sender_mail:
-        doc.ExtUserPtr.Email,
+      sender_mail: doc?.SenderMail || doc.ExtUserPtr.Email,
       sender_phone: doc.ExtUserPtr?.Phone || "",
       receiver_name: userDetails?.Name || "",
       receiver_email: userDetails?.Email,
@@ -586,7 +594,7 @@ const TemplatesReport = (props) => {
     setMail((prev) => ({ ...prev, subject: res.subject }));
   };
   // `handlebodyChange` is used to add or change body of resend mail
-  const handlebodyChange = (body, doc) => {
+  const handlebodyChange = (body, doc, type) => {
     const encodeBase64 = userDetails?.objectId
       ? btoa(`${doc.objectId}/${userDetails.Email}/${userDetails.objectId}`)
       : btoa(`${doc.objectId}/${userDetails.Email}`);
@@ -602,9 +610,9 @@ const TemplatesReport = (props) => {
       document_title: doc.Name,
       note: doc?.Note || "",
       sender_name:
+        doc?.SenderName ||
         doc.ExtUserPtr.Name,
-      sender_mail:
-        doc.ExtUserPtr.Email,
+      sender_mail: doc?.SenderMail || doc.ExtUserPtr.Email,
       sender_phone: doc.ExtUserPtr?.Phone || "",
       receiver_name: userDetails?.Name || "",
       receiver_email: userDetails?.Email || "",
@@ -616,7 +624,10 @@ const TemplatesReport = (props) => {
     const res = replaceMailVaribles("", body, variables);
 
     if (body) {
-      setMail((prev) => ({ ...prev, body: res.body }));
+      setMail((prev) => ({
+        ...prev,
+        body: { ...prev.body, [type]: res.body }
+      }));
     }
   };
   // `handleNextBtn` is used to open edit mail template screen in resend mail modal
@@ -646,9 +657,9 @@ const TemplatesReport = (props) => {
       document_title: doc.Name,
       note: doc?.Note || "",
       sender_name:
+        doc?.SenderName ||
         doc.ExtUserPtr.Name,
-      sender_mail:
-        doc.ExtUserPtr.Email,
+      sender_mail: doc?.SenderMail || doc.ExtUserPtr.Email,
       sender_phone: doc.ExtUserPtr?.Phone || "",
       receiver_name: user?.signerPtr?.Name || "",
       receiver_email: user?.email ? user?.email : user?.signerPtr?.Email,
@@ -666,7 +677,17 @@ const TemplatesReport = (props) => {
       doc?.ExtUserPtr?.TenantId?.RequestBody ||
       `<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8' /></head><body><p>Hi {{receiver_name}},</p><br><p>We hope this email finds you well. {{sender_name}} has requested you to review and sign <b>"{{document_title}}"</b>.</p><p>Your signature is crucial to proceed with the next steps as it signifies your agreement and authorization.</p><br><p><a href='{{signing_url}}' rel='noopener noreferrer' target='_blank'>Sign here</a></p><br><br><p>If you have any questions or need further clarification regarding the document or the signing process,  please contact the sender.</p><br><p>Thanks</p><p> Team ${appName}</p><br></body> </html>`;
     const res = replaceMailVaribles(subject, body, variables);
-    setMail((prev) => ({ ...prev, subject: res.subject, body: res.body }));
+    setEmailEditorType(
+      doc?.EmailEditorType?.request ||
+        doc?.ExtUserPtr?.EmailEditorType?.request ||
+        doc?.ExtUserPtr?.TenantId?.EmailEditorType?.request ||
+        "basic"
+    );
+    setMail((prev) => ({
+      ...prev,
+      subject: res.subject,
+      body: { basic: res.body, advanced: res.body }
+    }));
     setIsNextStep({ [user.Id]: true });
   });
   const handleResendMail = utils.withSessionValidation(async (e, doc, user) => {
@@ -686,8 +707,9 @@ const TemplatesReport = (props) => {
       recipient: userDetails?.Email,
       subject: mail.subject,
       from:
+        doc?.SenderName ||
         doc?.ExtUserPtr?.Email,
-      html: mail.body
+      html: emailEditorType === "basic" ? mail.body.basic : mail.body.advanced
     };
     try {
       const res = await axios.post(url, params, { headers: headers });
@@ -958,9 +980,13 @@ const TemplatesReport = (props) => {
                   subject;
             const userBody =
                   body;
+            const finalBody = userBody || defaultMailBody;
+            const emailEditorType =
+                  tenantDetails?.EmailEditorType?.request;
+            setEmailEditorType(emailEditorType || "basic");
             setCustomizeMail({
               subject: userSubject || defaultMailSubject,
-              body: userBody || defaultMailBody
+              body: { basic: finalBody, advanced: finalBody }
             });
             setDefaultMail({ subject: userSubject, body: userBody });
           }
@@ -1493,27 +1519,29 @@ const TemplatesReport = (props) => {
                                         </div>
                                         <div>
                                           <label
-                                            className="text-xs ml-1"
+                                            className="flex justify-between text-sm ml-1"
                                             htmlFor="mailbody"
                                           >
-                                            {t("body")}{" "}
+                                            <span>{t("body")} </span>
+                                            <button
+                                              className="op-link op-link-primary"
+                                              onClick={(e) => handleSwitch(e)}
+                                            >
+                                              Switch to{" "}
+                                              {emailEditorType === "basic"
+                                                ? t("switch-to-advanced")
+                                                : t("switch-to-basic")}
+                                            </button>
                                           </label>
-                                          {/* <EditorToolbar containerId="toolbar1" />
-                                          <ReactQuill
-                                            id="mailbody"
-                                            theme="snow"
-                                            value={mail.body || ""}
-                                            placeholder="add body of email "
-                                            modules={module1}
-                                            formats={formats}
-                                            onChange={(value) =>
-                                              handlebodyChange(value, item)
-                                            }
-                                          /> */}
-                                          <EmailBodyEditor
-                                            value={mail.body || ""}
-                                            onChange={(value) =>
-                                              handlebodyChange(value, item)
+                                          <EmailEditor
+                                            type={emailEditorType}
+                                            values={mail.body || ""}
+                                            onChange={(value, type) =>
+                                              handlebodyChange(
+                                                value,
+                                                item,
+                                                type
+                                              )
                                             }
                                             smallscreen
                                           />
@@ -1654,6 +1682,8 @@ const TemplatesReport = (props) => {
           handleShareList={handleShareList}
           setDocumentDetails={setDocumentDetails}
           copyUrlRef={copyUrlRef}
+          emailEditorType={emailEditorType}
+          setEmailEditorType={setEmailEditorType}
         />
         <ModalUi
           isOpen={isSend}
@@ -1747,21 +1777,16 @@ const TemplatesReport = (props) => {
               {mailStatus !== "success" &&
                 currUserId &&
                 templateDetails?.SendinOrder && (
-                  <>
-                    <div
-                      className="op-btn op-btn-outline w-[50%] md:w-[35%] mt-1"
-                      onClick={() => {
-                        setIsSend(false);
-                        setIsMailModal(true);
-                      }}
-                    >
-                      <i
-                        className="fa-regular fa-envelope"
-                        style={{ color: "#002864", fontSize: "19px" }}
-                      ></i>{" "}
-                      <span>{t("send-to-email")}</span>
-                    </div>
-                  </>
+                  <div
+                    className="op-btn op-btn-outline w-[50%] md:w-[35%] mt-1 group"
+                    onClick={() => {
+                      setIsSend(false);
+                      setIsMailModal(true);
+                    }}
+                  >
+                    <i className="fa-regular fa-envelope text-[19px] op-text-primary group-hover:text-base-100 "></i>{" "}
+                    <span>{t("send-to-email")}</span>
+                  </div>
                 )}
             </div>
             {!mailStatus && (

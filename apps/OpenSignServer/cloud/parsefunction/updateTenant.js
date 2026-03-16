@@ -22,6 +22,7 @@ export default async function updateTenant(request) {
         }
       }
     });
+    if (details?.EmailEditorType) tenant.set('EmailEditorType', details.EmailEditorType);
 
     const tenantRes = await tenant.save(null, { useMasterKey: true });
     if (tenantRes) {

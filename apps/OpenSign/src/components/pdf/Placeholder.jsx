@@ -496,7 +496,7 @@ function Placeholder(props) {
           ></i>
           {/* delete icon for all widgets */}
           <i
-            className="fa-light fa-circle-xmark icon text-[#188ae2] -right-[8px] -top-[18px] "
+            className="fa-light fa-trash-can icon text-[#188ae2] -right-[8px] -top-[18px] "
             onClick={(e) => {
               e.stopPropagation();
               showGuidelines(false);

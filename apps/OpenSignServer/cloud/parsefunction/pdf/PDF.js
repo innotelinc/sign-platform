@@ -16,6 +16,7 @@ import { Placeholder } from './Placeholder.js';
 import { SignPdf } from '@signpdf/signpdf';
 import { P12Signer } from '@signpdf/signer-p12';
 import { buildDownloadFilename, parseUploadFile } from '../../../utils/fileUtils.js';
+import sendMailWithAttachment from '../sendMailWithAttachment.js';
 
 const serverUrl = cloudServerUrl; // process.env.SERVER_URL;
 const APPID = serverAppId;
@@ -224,7 +225,7 @@ async function sendCompletedMail(obj) {
     const variables = {
       document_title: pdfName,
       note: doc?.Note,
-      sender_name: sender.Name,
+      sender_name: doc?.SenderName || sender.Name,
       sender_mail: doc?.SenderMail || sender.Email,
       sender_phone: sender?.Phone || '',
       receiver_name: sender.Name,
@@ -249,8 +250,8 @@ async function sendCompletedMail(obj) {
   const params = {
     extUserId: sender.objectId,
     url: url,
-    from: TenantAppName,
-    replyto: doc?.ExtUserPtr?.Email || '',
+    from: doc?.SenderName || TenantAppName,
+    replyto: doc?.SenderMail || doc?.ExtUserPtr?.Email || '',
     recipient: recipient,
     subject: subject,
     pdfName: pdfName,
@@ -261,9 +262,9 @@ async function sendCompletedMail(obj) {
     filename: docName,
   };
   try {
-    const res = await axios.post(serverUrl + '/functions/sendmailv3', params, { headers });
-    // console.log('res', res.data.result);
-    if (res.data?.result?.status !== 'success') {
+    const res = await sendMailWithAttachment(params);
+    // console.log("res ", res)
+    if (res?.status !== 'success') {
       unlinkFile(`./exports/signed_certificate_${doc.objectId}.pdf`);
     }
   } catch (err) {

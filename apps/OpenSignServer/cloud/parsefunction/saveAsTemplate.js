@@ -29,11 +29,11 @@ export default async function saveAsTemplate(request) {
       templateCls.set('IsEnableOTP', _docRes?.IsEnableOTP === true ? true : false);
       templateCls.set('IsTourEnabled', _docRes?.IsTourEnabled === true ? true : false);
       templateCls.set('AllowModifications', _docRes?.AllowModifications || false);
-      templateCls.set('EmailSenderName', _docRes?.EmailSenderName);
       templateCls.set('SenderName', _docRes?.SenderName);
       templateCls.set('SenderMail', _docRes?.SenderMail);
       templateCls.set('RequestBody', _docRes?.RequestBody);
       templateCls.set('RequestSubject', _docRes?.RequestSubject);
+      if (_docRes?.EmailEditorType) templateCls.set('EmailEditorType', _docRes?.EmailEditorType);
       templateCls.set('NextReminderDate', _docRes?.NextReminderDate);
       templateCls.set('RedirectUrl', _docRes?.RedirectUrl);
       templateCls.set(

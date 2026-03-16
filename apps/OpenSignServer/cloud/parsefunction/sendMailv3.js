@@ -40,220 +40,45 @@ async function sendMailProvider(req) {
         mailgunDomain = process.env.MAILGUN_DOMAIN;
       }
     }
-    if (req.params.url) {
-      const randomNumber = Math.floor(Math.random() * 5000);
-      const testPdf = `test_${randomNumber}.pdf`;
-      try {
-        let Pdf = fs.createWriteStream(testPdf);
-        const writeToLocalDisk = () => {
-          return new Promise((resolve, reject) => {
-            const isSecure =
-              new URL(req.params.url)?.protocol === 'https:' &&
-              new URL(req.params.url)?.hostname !== 'localhost';
-            if (isSecure) {
-              https
-                .get(req.params.url, async function (response) {
-                  response.pipe(Pdf);
-                  response.on('end', () => resolve('success'));
-                })
-                .on('error', e => {
-                  console.error(`error: ${e.message}`);
-                  resolve('error');
-                });
-            } else {
-              const httpsAgent = new https.Agent({ rejectUnauthorized: false }); // Disable SSL validation
-              const localUrl = req.params.url;
-              const newlocalUrl = localUrl.replace(
-                'https://localhost:3001/api',
-                'http://localhost:8080'
-              );
-              axios
-                .get(newlocalUrl, { responseType: 'stream', httpsAgent: httpsAgent })
-                .then(response => {
-                  response.data.pipe(Pdf);
-                  Pdf.on('finish', () => resolve('success'));
-                  Pdf.on('error', () => resolve('error'));
-                })
-                .catch(e => {
-                  console.log('error in localurl', e.message);
-                  resolve('error');
-                });
-            }
-          });
-        };
-        // `writeToLocalDisk` is used to create pdf file from doc url
-        const ress = await writeToLocalDisk();
-        if (ress) {
-          function readTolocal() {
-            return new Promise((resolve, reject) => {
-              setTimeout(() => {
-                let PdfBuffer = fs.readFileSync(Pdf.path);
-                resolve(PdfBuffer);
-              }, 100);
-            });
-          }
-          //  `PdfBuffer` used to create buffer from pdf file
-          let PdfBuffer = await readTolocal();
-          const pdfName = req.params.pdfName && `${req.params.pdfName}.pdf`;
-          const filename = req.params.filename;
-          const file = {
-            filename: filename || pdfName || 'exported.pdf',
-            content: smtpenable ? PdfBuffer : undefined,
-            data: smtpenable ? undefined : PdfBuffer,
-          };
 
-          let attachment;
-          const certificatePath = req.params.certificatePath || `./exports/certificate.pdf`;
-          if (fs.existsSync(certificatePath)) {
-            try {
-              //  `certificateBuffer` used to create buffer from pdf file
-              const certificateBuffer = fs.readFileSync(certificatePath);
-              const certificate = {
-                filename: 'certificate.pdf',
-                content: smtpenable ? certificateBuffer : undefined, //fs.readFileSync('./exports/exported_file_1223.pdf'),
-                data: smtpenable ? undefined : certificateBuffer,
-              };
-              attachment = [file, certificate];
-            } catch (err) {
-              attachment = [file];
-              console.log('Err in read certificate sendmailv3', err);
-            }
-          } else {
-            attachment = [file];
-          }
-          const from = req.params.from || '';
-          const mailsender = smtpenable ? process.env.SMTP_USER_EMAIL : process.env.MAILGUN_SENDER;
-          const replyto = req.params?.replyto || '';
-          const messageParams = {
-            from: from + ' <' + mailsender + '>',
-            to: req.params.recipient,
-            subject: req.params.subject,
-            text: req.params.text || 'mail',
-            html: req.params?.html ? req.params.html + reportMsg : '',
-            attachments: smtpenable ? attachment : undefined,
-            attachment: smtpenable ? undefined : attachment,
-            bcc: req.params.bcc ? req.params.bcc : undefined,
-            replyTo: replyto ? replyto : undefined,
-          };
-          if (transporterSMTP) {
-            const res = await transporterSMTP.sendMail(messageParams);
-            console.log('smtp transporter res: ', res?.response);
-            if (!res.err) {
-              if (extUserId) {
-                await updateMailCount(extUserId);
-              }
-              if (fs.existsSync(certificatePath)) {
-                try {
-                  fs.unlinkSync(certificatePath);
-                } catch (err) {
-                  console.log('Err in unlink certificate sendmailv3');
-                }
-              }
-              if (fs.existsSync(testPdf)) {
-                try {
-                  fs.unlinkSync(testPdf);
-                } catch (err) {
-                  console.log('Err in unlink pdf sendmailv3');
-                }
-              }
-              return { status: 'success' };
-            }
-          } else {
-            if (mailgunApiKey) {
-              const res = await mailgunClient.messages.create(mailgunDomain, messageParams);
-              console.log('mailgun res: ', res?.status);
-              if (res.status === 200) {
-                if (extUserId) {
-                  await updateMailCount(extUserId);
-                }
-                if (fs.existsSync(certificatePath)) {
-                  try {
-                    fs.unlinkSync(certificatePath);
-                  } catch (err) {
-                    console.log('Err in unlink certificate sendmailv3');
-                  }
-                }
-                if (fs.existsSync(testPdf)) {
-                  try {
-                    fs.unlinkSync(testPdf);
-                  } catch (err) {
-                    console.log('Err in unlink pdf sendmailv3');
-                  }
-                }
-                return { status: 'success' };
-              }
-            } else {
-              if (fs.existsSync(certificatePath)) {
-                try {
-                  fs.unlinkSync(certificatePath);
-                } catch (err) {
-                  console.log('Err in unlink certificate sendmailv3');
-                }
-              }
-              if (fs.existsSync(testPdf)) {
-                try {
-                  fs.unlinkSync(testPdf);
-                } catch (err) {
-                  console.log('Err in unlink pdf sendmailv3');
-                }
-              }
-              return { status: 'error' };
-            }
-          }
+    const from = req.params.from || '';
+    const mailsender = smtpenable ? process.env.SMTP_USER_EMAIL : process.env.MAILGUN_SENDER;
+    const replyto = req.params?.replyto || '';
+    const messageParams = {
+      from: from + ' <' + mailsender + '>',
+      to: req.params.recipient,
+      subject: req.params.subject,
+      text: req.params.text || 'mail',
+      html: req.params?.html ? req.params.html + reportMsg : '',
+      bcc: req.params.bcc ? req.params.bcc : undefined,
+      replyTo: replyto ? replyto : undefined,
+    };
+
+    if (transporterSMTP) {
+      const res = await transporterSMTP.sendMail(messageParams);
+      console.log('smtp transporter res: ', res?.response);
+      if (!res.err) {
+        if (extUserId) {
+          await updateMailCount(extUserId);
         }
-      } catch (err) {
-        console.log(`Error in sendmailv3: ${err}`);
-        if (fs.existsSync(testPdf)) {
-          try {
-            fs.unlinkSync(testPdf);
-          } catch (err) {
-            console.log('Err in unlink pdf sendmailv3');
-          }
-        }
-        if (err) {
-          return { status: 'error' };
-        }
+        return { status: 'success' };
       }
     } else {
-      const from = req.params.from || '';
-      const mailsender = smtpenable ? process.env.SMTP_USER_EMAIL : process.env.MAILGUN_SENDER;
-      const replyto = req.params?.replyto || '';
-      const messageParams = {
-        from: from + ' <' + mailsender + '>',
-        to: req.params.recipient,
-        subject: req.params.subject,
-        text: req.params.text || 'mail',
-        html: req.params?.html ? req.params.html + reportMsg : '',
-        bcc: req.params.bcc ? req.params.bcc : undefined,
-        replyTo: replyto ? replyto : undefined,
-      };
-
-      if (transporterSMTP) {
-        const res = await transporterSMTP.sendMail(messageParams);
-        console.log('smtp transporter res: ', res?.response);
-        if (!res.err) {
+      if (mailgunApiKey) {
+        const res = await mailgunClient.messages.create(mailgunDomain, messageParams);
+        console.log('mailgun res: ', res?.status);
+        if (res.status === 200) {
           if (extUserId) {
             await updateMailCount(extUserId);
           }
           return { status: 'success' };
         }
       } else {
-        if (mailgunApiKey) {
-          const res = await mailgunClient.messages.create(mailgunDomain, messageParams);
-          console.log('mailgun res: ', res?.status);
-          if (res.status === 200) {
-            if (extUserId) {
-              await updateMailCount(extUserId);
-            }
-            return { status: 'success' };
-          }
-        } else {
-          return { status: 'error' };
-        }
+        return { status: 'error' };
       }
     }
   } catch (err) {
-    console.log(`Error in sendmailv3: ${err}`);
+    console.log(`sendmailv3 Error: ${err}`);
     if (err) {
       return { status: 'error' };
     }
