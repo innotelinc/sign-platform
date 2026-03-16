@@ -17,7 +17,6 @@ import {
 } from "../../../constant/Utils";
 import PenColorComponent from "../../pdf/tab/PenColorComponent";
 import { getDatePickerDate, toHtmlPattern } from "../../../utils";
-import CellsInput from "../../shared/fields/CellsInput";
 import { emailRegex } from "../../../constant/const";
 
 const inputOpt = new Set(["text", "email", "number"]);
@@ -527,29 +526,23 @@ const DrawWidget = ({ widget, isRequired, onChange, showLabel }) => {
   );
 };
 
-const CellsWidget = ({
-  widget,
-  isRequired,
-  onChange,
-  showLabel,
-}) => {
+const CellsWidget = ({ widget, isRequired, onChange, showLabel }) => {
   const { t } = useTranslation();
   const count = widget?.options?.cellCount || 1;
   const [word, setWord] = useState("");
   const inputType = widget?.options?.validation?.type || "";
   const serverRegex = widget?.options?.validation?.pattern;
+  const hint = widget?.options?.hint;
   const regExpression = inputValidation(serverRegex, inputType);
   const pattern = useMemo(() => toHtmlPattern(regExpression), [regExpression]);
-
   useEffect(() => {
     const response =
       widget?.options?.response ?? widget?.options?.defaultValue ?? "";
-    const isNumber = inputType === "number" && response;
-    setWord(isNumber ? Number(response) : response);
+    setWord(String(response || ""));
   }, []);
 
-  const handleChange = (words) => {
-    const value = words;
+  const handleChange = (e) => {
+    const value = e.target.value;
     setWord(value);
     onChange(value);
   };
@@ -562,23 +555,13 @@ const CellsWidget = ({
         </div>
       )}
       <div className="relative">
-        <CellsInput
-          hint={
-            widget?.options?.hint ||
-            t("enter-value", { value: widget?.options?.name })
-          }
-          count={count}
-          value={word}
-          onChange={handleChange}
-          only="all"
-          autoFocus
-        />
         <input
-          id={`widget-${widget?.options?.name}-${widget.key}`}
-          value={word}
-          required={isRequired}
-          tabIndex={-1}
-          onChange={() => {}}
+          type="text"
+          placeholder={
+            hint || t("enter-value", { value: widget?.options?.name })
+          }
+          value={word ?? ""}
+          onChange={(e) => handleChange(e)}
           pattern={pattern || undefined} // if no pattern, browser won't do pattern validation
           onInvalid={(e) => {
             const el = e.currentTarget;
@@ -592,7 +575,8 @@ const CellsWidget = ({
           onInput={(e) => {
             e.currentTarget.setCustomValidity("");
           }}
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 w-[1px] h-[1px] pointer-events-none"
+          className="op-input op-input-bordered op-input-sm focus:outline-none text-base-content hover:border-base-content w-full text-xs"
+          maxLength={count}
         />
       </div>
     </div>

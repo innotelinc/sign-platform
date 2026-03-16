@@ -813,9 +813,11 @@ function PdfRequestFiles(
                         { day: "numeric", month: "long", year: "numeric" }
                       );
                       let senderEmail =
+                        pdfDetails?.[0]?.SenderMail ||
                         pdfDetails?.[0]?.ExtUserPtr?.Email;
                       let senderPhone = pdfDetails?.[0]?.ExtUserPtr?.Phone;
                       const senderName =
+                        pdfDetails?.[0]?.SenderName ||
                         pdfDetails?.[0].ExtUserPtr.Name;
                       const documentName = pdfDetails?.[0].Name;
                       try {
@@ -892,6 +894,7 @@ function PdfRequestFiles(
                             ? replaceVar?.subject
                             : mailTemplate(mailparam).subject,
                           from:
+                            pdfDetails?.[0]?.SenderName ||
                             senderEmail,
                           html: replaceVar?.body
                             ? replaceVar?.body

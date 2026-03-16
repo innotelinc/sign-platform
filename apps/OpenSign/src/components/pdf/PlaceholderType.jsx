@@ -33,6 +33,8 @@ function PlaceholderType(props) {
   const textRef = useRef();
   const prefillImg = useSelector((state) => state.widget.prefillImg);
   const prefillImgLoad = useSelector((state) => state.widget.prefillImgLoad);
+  const defaultData = props?.pos?.options?.defaultValue;
+  const response = props?.pos?.options?.response;
   const type = props?.pos?.type;
   const iswidgetEnable =
     props.isSignYourself ||
@@ -64,11 +66,7 @@ function PlaceholderType(props) {
   useEffect(() => {
     if (type !== "date") {
       if (type && type === "checkbox") {
-        setSelectedCheckbox(
-          props?.pos?.options?.response ||
-            props?.pos?.options?.defaultValue ||
-            []
-        );
+        setSelectedCheckbox(response || defaultData || []);
       }
       else {
         // keep displayed value in sync with the stored response
@@ -128,7 +126,7 @@ function PlaceholderType(props) {
     const lastWord = name.length > 1 ? `-${name[name.length - 1]}` : "";
     const title =
       props?.pos?.type === name[0] ? `${name[0]}${lastWord}` : widgetName;
-    return props?.pos?.options?.hint || title;
+    return defaultData || props?.pos?.options?.hint || title;
   };
   //useEffect is used to increase auto height of text/textInput widget when user using multiline option and enter value in next line
   useEffect(() => {
@@ -176,6 +174,7 @@ function PlaceholderType(props) {
       setDate("");
     }
   }, [props?.startDate, props?.selectDate?.format]);
+
   switch (type) {
     case "signature":
       return props.pos.SignUrl ? (
@@ -438,10 +437,12 @@ function PlaceholderType(props) {
       ) : (
         <div
           style={textWidgetStyle}
-          className="select-none-cls overflow-hidden uppercase"
+          className="select-none-cls overflow-hidden"
         >
           <span>
-            {props?.selectDate?.format ||
+            {(defaultData !== "today" && defaultData) ||
+              (response !== "today" && response) ||
+              props?.selectDate?.format ||
               props.pos?.options?.validation?.format ||
               "MM/dd/yyyy"}
           </span>

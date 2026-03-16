@@ -51,6 +51,7 @@ const Preferences = () => {
   const [is12HourTime, setIs12HourTime] = useState(false);
   const [isLTVEnabled, setIsLTVEnabled] = useState(false);
   const [fileNameFormat, setFileNameFormat] = useState("DOCNAME");
+  const [useNameAsSender, setUseNameAsSender] = useState(false);
 
   useEffect(() => {
     fetchSignType();
@@ -138,6 +139,7 @@ const Preferences = () => {
       const downloadFilenameFormat =
         _getUser?.DownloadFilenameFormat || "DOCNAME";
       setFileNameFormat(downloadFilenameFormat);
+      setUseNameAsSender(_getUser?.UseNameAsSender === true);
     } catch (err) {
       console.error("Error while getting user details: ", err);
       setErrMsg(t("something-went-wrong-mssg"));
@@ -201,6 +203,7 @@ const Preferences = () => {
           Is12HourTime: is12HourTime,
           IsLTVEnabled: isLTVEnabled,
           DownloadFilenameFormat: fileNameFormat,
+          UseNameAsSender: useNameAsSender,
         };
         const updateRes = await Parse.Cloud.run("updatepreferences", params);
         if (updateRes) {
@@ -215,6 +218,7 @@ const Preferences = () => {
             extUser.DateFormat = dateFormat;
             extUser.Is12HourTime = is12HourTime;
             extUser.DownloadFilenameFormat = fileNameFormat;
+            extUser.UseNameAsSender = useNameAsSender;
             const _extUser = JSON.parse(JSON.stringify(extUser));
             localStorage.setItem("Extand_Class", JSON.stringify([_extUser]));
           }
@@ -518,6 +522,46 @@ const Preferences = () => {
                               {t("no")}
                             </label>
                           </div>
+                        </div>
+                      </div>
+
+                      <div className="mb-6">
+                        <label
+                          htmlFor="sender-name-toggle"
+                          className="text-[14px] mb-[0.7rem] font-medium"
+                        >
+                          {t("use-name-as-sender")}
+                        </label>
+                        <a
+                          data-tooltip-id="sender-name-toggle-tooltip"
+                          className="ml-1"
+                        >
+                          <sup>
+                            <i className="fa-light fa-question rounded-full border-[#33bbff] text-[#33bbff] text-[13px] border-[1px] py-[1.5px] px-[4px]"></i>
+                          </sup>
+                        </a>
+                        <ReactTooltip
+                          id="sender-name-toggle-tooltip"
+                          className="z-[999]"
+                        >
+                          <div className="max-w-[200px] md:max-w-[450px] text-[13px] font-medium">
+                            <p>
+                              {t("use-name-as-sender-help", {
+                                appName: appName
+                              })}
+                            </p>
+                          </div>
+                        </ReactTooltip>
+                        <div className="cursor-pointer relative block items-center mb-0 ml-1">
+                          <input
+                            id="sender-name-toggle"
+                            type="checkbox"
+                            className="op-toggle checked:[--tglbg:#3368ff] transition-all checked:text-white"
+                            checked={useNameAsSender}
+                            onChange={() =>
+                              setUseNameAsSender((prevValue) => !prevValue)
+                            }
+                          />
                         </div>
                       </div>
 

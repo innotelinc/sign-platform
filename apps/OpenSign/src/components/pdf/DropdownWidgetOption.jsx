@@ -220,7 +220,7 @@ function DropdownWidgetOption(props) {
                   />
 
                   <i
-                    className="fa-light fa-rectangle-xmark text-[25px] ml-[10px] text-accent cursor-pointer"
+                    className="fa-light fa-trash-can text-[25px] ml-[10px] text-accent cursor-pointer"
                     onClick={() => handleDeleteInput(index)}
                   ></i>
                 </div>

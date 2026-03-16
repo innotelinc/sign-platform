@@ -10,6 +10,7 @@ import ShareButton from "../../primitives/ShareButton";
 import DatePicker from "../../components/DatePicker";
 import Parse from "parse";
 import {
+  formatDateToDdMmmYyyy,
   copytoData,
   fetchUrl,
   getSignedUrl,
@@ -23,12 +24,6 @@ import {
   defaultMailBody,
   defaultMailSubject
 } from "../../constant/Utils";
-// import EditorToolbar, {
-//   module1,
-//   formats
-// } from "../../components/pdf/EditorToolbar";
-// import ReactQuill from "react-quill-new";
-// import "../../styles/quill.css";
 import BulkSendUi from "../../components/bulksend/BulkSendUi";
 import Loader from "../../primitives/Loader";
 import { serverUrl_fn } from "../../constant/appinfo";
@@ -41,7 +36,7 @@ import * as utils from "../../utils";
 import { RenderReportCell } from "../../primitives/RenderReportCell";
 import CustomizeMail from "../../components/pdf/CustomizeMail";
 import { useSelector } from "react-redux";
-import EmailBodyEditor from "../../components/EmailBodyEditor";
+import EmailEditor from "../../components/emaileditor";
 
 const DocumentsReport = (props) => {
   const copyUrlRef = useRef(null);
@@ -66,6 +61,7 @@ const DocumentsReport = (props) => {
   const [alertMsg, setAlertMsg] = useState({ type: "success", message: "" });
   const [isResendMail, setIsResendMail] = useState({});
   const [mail, setMail] = useState({ subject: "", body: "" });
+  const [emailEditorType, setEmailEditorType] = useState("basic");
   const [userDetails, setUserDetails] = useState({});
   const [isNextStep, setIsNextStep] = useState({});
   const [isBulkSend, setIsBulkSend] = useState({});
@@ -93,7 +89,10 @@ const DocumentsReport = (props) => {
   const [isSubmit, setIsSubmit] = useState(false);
   const [error, setError] = useState("");
   const [isMailModal, setIsMailModal] = useState(false);
-  const [customizeMail, setCustomizeMail] = useState({ body: "", subject: "" });
+  const [customizeMail, setCustomizeMail] = useState({
+    body: { basic: "", advanced: "" },
+    subject: ""
+  });
   const [defaultMail, setDefaultMail] = useState({ body: "", subject: "" });
   const [currUserId, setCurrUserId] = useState(false);
   const [documentDetails, setDocumentDetails] = useState();
@@ -213,9 +212,13 @@ const DocumentsReport = (props) => {
                 subject;
           const userBody =
                 body;
+          const finalBody = userBody || defaultMailBody;
+          const emailEditorType =
+                tenantDetails?.EmailEditorType;
+          setEmailEditorType(emailEditorType?.request || "basic");
           setCustomizeMail({
             subject: userSubject || defaultMailSubject,
-            body: userBody || defaultMailBody
+            body: { basic: finalBody, advanced: finalBody }
           });
           setDefaultMail({ subject: userSubject, body: userBody });
           return filterSignTypes;
@@ -525,6 +528,14 @@ const DocumentsReport = (props) => {
     }
   };
 
+  // `handleSwitch` is used to change email editor from basic => advanced or vice versa
+  const handleSwitch = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const editor = emailEditorType === "basic" ? "advanced" : "basic";
+    setEmailEditorType(editor);
+  };
+
   // `handleSubjectChange` is used to add or change subject of resend mail
   const handleSubjectChange = (subject, doc) => {
     const encodeBase64 = userDetails?.objectId
@@ -542,9 +553,9 @@ const DocumentsReport = (props) => {
       document_title: doc.Name,
       note: doc?.Note || "",
       sender_name:
+        doc?.SenderName ||
         doc.ExtUserPtr.Name,
-      sender_mail:
-        doc.ExtUserPtr.Email,
+      sender_mail: doc?.SenderMail || doc.ExtUserPtr.Email,
       sender_phone: doc.ExtUserPtr?.Phone || "",
       receiver_name: userDetails?.Name || "",
       receiver_email: userDetails?.Email,
@@ -558,7 +569,7 @@ const DocumentsReport = (props) => {
   };
 
   // `handlebodyChange` is used to add or change body of resend mail
-  const handlebodyChange = (body, doc) => {
+  const handlebodyChange = (body, doc, type) => {
     const encodeBase64 = userDetails?.objectId
       ? btoa(`${doc.objectId}/${userDetails.Email}/${userDetails.objectId}`)
       : btoa(`${doc.objectId}/${userDetails.Email}`);
@@ -574,9 +585,9 @@ const DocumentsReport = (props) => {
       document_title: doc.Name,
       note: doc?.Note || "",
       sender_name:
+        doc?.SenderName ||
         doc.ExtUserPtr.Name,
-      sender_mail:
-        doc.ExtUserPtr.Email,
+      sender_mail: doc?.SenderMail || doc.ExtUserPtr.Email,
       sender_phone: doc.ExtUserPtr?.Phone || "",
       receiver_name: userDetails?.Name || "",
       receiver_email: userDetails?.Email || "",
@@ -588,7 +599,10 @@ const DocumentsReport = (props) => {
     const res = replaceMailVaribles("", body, variables);
 
     if (body) {
-      setMail((prev) => ({ ...prev, body: res.body }));
+      setMail((prev) => ({
+        ...prev,
+        body: { ...prev.body, [type]: res.body }
+      }));
     }
   };
   // `handleNextBtn` is used to open edit mail template screen in resend mail modal
@@ -618,9 +632,9 @@ const DocumentsReport = (props) => {
       document_title: doc.Name,
       note: doc?.Note || "",
       sender_name:
+        doc?.SenderName ||
         doc.ExtUserPtr.Name,
-      sender_mail:
-        doc.ExtUserPtr.Email,
+      sender_mail: doc?.SenderMail || doc.ExtUserPtr.Email,
       sender_phone: doc.ExtUserPtr?.Phone || "",
       receiver_name: user?.signerPtr?.Name || "",
       receiver_email: user?.email ? user?.email : user?.signerPtr?.Email,
@@ -638,7 +652,17 @@ const DocumentsReport = (props) => {
       doc?.ExtUserPtr?.TenantId?.RequestBody ||
       `<html><head><meta http-equiv='Content-Type' content='text/html; charset=UTF-8' /></head><body><p>Hi {{receiver_name}},</p><br><p>We hope this email finds you well. {{sender_name}} has requested you to review and sign <b>"{{document_title}}"</b>.</p><p>Your signature is crucial to proceed with the next steps as it signifies your agreement and authorization.</p><br><p><a href='{{signing_url}}' rel='noopener noreferrer' target='_blank'>Sign here</a></p><br><br><p>If you have any questions or need further clarification regarding the document or the signing process,  please contact the sender.</p><br><p>Thanks</p><p> Team ${appName}</p><br></body> </html>`;
     const res = replaceMailVaribles(subject, body, variables);
-    setMail((prev) => ({ ...prev, subject: res.subject, body: res.body }));
+    setMail((prev) => ({
+      ...prev,
+      subject: res.subject,
+      body: { basic: res.body, advanced: res.body }
+    }));
+    setEmailEditorType(
+      doc?.EmailEditorType?.request ||
+        doc?.ExtUserPtr?.EmailEditorType?.request ||
+        doc?.ExtUserPtr?.TenantId?.EmailEditorType?.request ||
+        "basic"
+    );
     setIsNextStep({ [user.Id]: true });
   };
   const handleResendMail = utils.withSessionValidation(async (e, doc, user) => {
@@ -651,15 +675,14 @@ const DocumentsReport = (props) => {
       sessionToken: localStorage.getItem("accesstoken")
     };
     let params = {
-      replyto:
-        doc?.ExtUserPtr?.Email ||
-        "",
+      replyto: doc?.SenderMail || doc?.ExtUserPtr?.Email || "",
       extUserId: doc?.ExtUserPtr?.objectId,
       recipient: userDetails?.Email,
       subject: mail.subject,
       from:
+        doc?.SenderName ||
         doc?.ExtUserPtr?.Email,
-      html: mail.body
+      html: emailEditorType === "basic" ? mail.body.basic : mail.body.advanced
     };
     try {
       const res = await axios.post(url, params, { headers: headers });
@@ -1109,6 +1132,31 @@ const DocumentsReport = (props) => {
               >
                 <i className="fa-light fa-table-columns"></i>
               </button>
+            )}
+            {props?.ReportName === "In-progress documents" && (
+              <div className="op-dropdown op-dropdown-end">
+                <div
+                  tabIndex={0}
+                  role="button"
+                  className="focus:outline-none rounded-md text-[18px]"
+                >
+                  <i className="fa-light fa-filter"></i>
+                </div>
+                <ul
+                  tabIndex="-1"
+                  className="op-dropdown-content op-menu op-menu-sm shadow-black/20 bg-base-100 text-base-content rounded-box z-[70] w-52 p-2 shadow-sm"
+                >
+                  <li onClick={() => props.handleSignerStatusFilter("all")}>
+                    <a>{t("all-signer-status")}</a>
+                  </li>
+                  <li onClick={() => props.handleSignerStatusFilter("viewed")}>
+                    <a>{t("viewed")}</a>
+                  </li>
+                  <li onClick={() => props.handleSignerStatusFilter("signed")}>
+                    <a>{t("signed")}</a>
+                  </li>
+                </ul>
+              </div>
             )}
           </div>
         </div>
@@ -1637,27 +1685,28 @@ const DocumentsReport = (props) => {
                                         </div>
                                         <div>
                                           <label
-                                            className="text-xs ml-1"
+                                            className="flex justify-between text-sm ml-1"
                                             htmlFor="mailbody"
                                           >
-                                            {t("body")}{" "}
+                                            <span>{t("body")} </span>
+                                            <button
+                                              className="op-link op-link-primary"
+                                              onClick={(e) => handleSwitch(e)}
+                                            >
+                                              {emailEditorType === "basic"
+                                                ? t("switch-to-advanced")
+                                                : t("switch-to-basic")}
+                                            </button>
                                           </label>
-                                          {/* <EditorToolbar containerId="toolbar1" />
-                                          <ReactQuill
-                                            id="mailbody"
-                                            theme="snow"
-                                            value={mail.body || ""}
-                                            placeholder="add body of email "
-                                            modules={module1}
-                                            formats={formats}
-                                            onChange={(value) =>
-                                              handlebodyChange(value, item)
-                                            }
-                                          /> */}
-                                          <EmailBodyEditor
-                                            value={mail.body || ""}
-                                            onChange={(value) =>
-                                              handlebodyChange(value, item)
+                                          <EmailEditor
+                                            type={emailEditorType}
+                                            values={mail.body || ""}
+                                            onChange={(value, type) =>
+                                              handlebodyChange(
+                                                value,
+                                                item,
+                                                type
+                                              )
                                             }
                                             smallscreen
                                           />
@@ -1807,6 +1856,8 @@ const DocumentsReport = (props) => {
           setDocumentDetails={setDocumentDetails}
           handleClose={handleCloseMail}
           copyUrlRef={copyUrlRef}
+          emailEditorType={emailEditorType}
+          setEmailEditorType={setEmailEditorType}
         />
         <ModalUi
           isOpen={isSend}
