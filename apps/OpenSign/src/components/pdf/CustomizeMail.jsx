@@ -46,11 +46,18 @@ function CustomizeMail(props) {
         );
         props?.setCurrUserId && props?.setCurrUserId(ownerDetails?.objectId);
       }
+      const customMail = {
+        body:
+          props?.emailEditorType === "basic"
+            ? props?.customizeMail?.body?.basic
+            : props?.customizeMail?.body?.advanced,
+        subject: props?.customizeMail?.subject
+      };
       //function is used to send email to signers for sign the document
       const mailRes = await sendEmailToSigners(
         documentData,
         props?.signerList,
-        props?.customizeMail,
+        customMail,
         props?.defaultMail,
         isCustomize,
       );
@@ -67,17 +74,28 @@ function CustomizeMail(props) {
     setIsReset(true);
     props?.setCustomizeMail({
       subject: defaultMailSubject,
-      body: defaultMailBody
+      body: { basic: defaultMailBody, advanced: defaultMailBody }
     });
   };
   const onChangeSubject = (value) => {
     setIsReset(false);
     props?.setCustomizeMail((prev) => ({ ...prev, subject: value }));
   };
-  const onChangeBody = (value) => {
+
+  const onChangeBody = (newValue, changedType) => {
     setIsReset(false);
-    props?.setCustomizeMail((prev) => ({ ...prev, body: value }));
+    props?.setCustomizeMail((prev) => ({
+      ...prev,
+      body: { ...prev.body, [changedType]: newValue }
+    }));
   };
+  const handleSwitch = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const editor = props?.emailEditorType === "basic" ? "advanced" : "basic";
+    props.setEmailEditorType(editor);
+  };
+
   return (
     <>
       {isLoader ? (
@@ -101,6 +119,8 @@ function CustomizeMail(props) {
                       onChangeBody={onChangeBody}
                       onChangeSubject={onChangeSubject}
                       isReset={isReset}
+                      handleSwitch={handleSwitch}
+                      emailEditorType={props.emailEditorType}
                     />
                     <div
                       className="flex justify-end items-center gap-1 mt-2 op-link op-link-primary"

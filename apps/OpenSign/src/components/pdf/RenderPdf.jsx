@@ -12,7 +12,9 @@ import {
   getContainerScale,
   handleImageResize,
   handleSignYourselfImageResize,
-  isMobile
+  isMobile,
+  textInputWidget,
+  textWidget
 } from "../../constant/Utils";
 import Placeholder from "./Placeholder";
 import Alert from "../../primitives/Alert";
@@ -44,6 +46,20 @@ function RenderPdf(props) {
   const isOpen = useSelector((state) => state.sidebar.isOpen);
   const scrollRef = useRef(null);
   const pdfContainerRef = useRef(null);
+
+  // Refs for drawing Text Input widget — avoids re-rendering the full tree on
+  // every pointermove event. Only isDrawing (a boolean) is kept in React state
+  // so that the overlay div is mounted/unmounted; coordinates are stored in
+  // refs and the overlay style is updated imperatively via drawingOverlayRef.
+  const [isDrawing, setIsDrawing] = useState(false);
+  const isDrawingRef = useRef(false);
+  const drawStartRef = useRef(null);
+  const drawEndRef = useRef(null);
+  const drawingOverlayRef = useRef(null);
+  // Ref flag to suppress the click event that fires after pointerup when a
+  // widget was just drawn, preventing the Document onClick from deselecting it.
+  const justDrewRef = useRef(false);
+
   useEffect(() => {
     dispatch(toggleSidebar(false));
     return () => {
@@ -311,6 +327,125 @@ function RenderPdf(props) {
       setScaledHeight(scaleHeight);
     }
   };
+
+  // Handle drawing Text Input widget on PDF
+  const handlePointerDown = (e) => {
+    // Only allow drawing in placeholder mode when no widget is selected
+    if (
+      !props.placeholder ||
+      props.currWidgetsDetails?.key ||
+      props.isDragging
+    ) {
+      return;
+    }
+
+    // Disable drawing on mobile/touch devices to avoid conflicts with pinch-to-zoom
+    if (isMobile || e.pointerType !== "mouse") {
+      return;
+    }
+
+    // Don't draw if clicking on an existing widget
+    if (e.target.closest(".signYourselfBlock")) {
+      return;
+    }
+
+    const rect = pdfContainerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    isDrawingRef.current = true;
+    drawStartRef.current = { x, y };
+    drawEndRef.current = { x, y };
+    setIsDrawing(true); // single setState to mount the overlay div
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDrawingRef.current || !drawStartRef.current) {
+      return;
+    }
+
+    const rect = pdfContainerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    drawEndRef.current = { x, y };
+
+    // Update the overlay position directly via DOM — no setState, no re-render
+    if (drawingOverlayRef.current) {
+      const width = Math.abs(x - drawStartRef.current.x);
+      const height = Math.abs(y - drawStartRef.current.y);
+      const rectX = Math.min(drawStartRef.current.x, x);
+      const rectY = Math.min(drawStartRef.current.y, y);
+      const s = drawingOverlayRef.current.style;
+      s.left = `${rectX}px`;
+      s.top = `${rectY}px`;
+      s.width = `${width}px`;
+      s.height = `${height}px`;
+    }
+  };
+
+  const handlePointerUp = (e) => {
+    if (!isDrawingRef.current || !drawStartRef.current || !drawEndRef.current) {
+      isDrawingRef.current = false;
+      drawStartRef.current = null;
+      drawEndRef.current = null;
+      setIsDrawing(false);
+      return;
+    }
+
+    const width = Math.abs(drawEndRef.current.x - drawStartRef.current.x);
+    const height = Math.abs(drawEndRef.current.y - drawStartRef.current.y);
+    
+    // Only create widget if the drawn area is large enough (minimum 30x20 pixels)
+    if (width > 30 && height > 20) {
+      const containerScale = getContainerScale(
+        props.pdfOriginalWH,
+        props.pageNumber,
+        props.containerWH
+      );
+
+      const rectX = Math.min(drawStartRef.current.x, drawEndRef.current.x);
+      const rectY = Math.min(drawStartRef.current.y, drawEndRef.current.y);
+
+      // Convert pixel coordinates to PDF coordinates
+      const xPosition = rectX / (containerScale * props.scale);
+      const yPosition = rectY / (containerScale * props.scale);
+      const widgetWidth = width / (containerScale * props.scale);
+      const widgetHeight = height / (containerScale * props.scale);
+
+      // Create a Text Input widget at the drawn position
+      if (props.addPositionOfSignature) {
+        // Simulate dropping a text input widget
+        const type =
+          props?.roleName === "prefill" ? textWidget : textInputWidget;
+        const textInputItem = { text: type, type: "BOX" };
+
+        const monitor = {
+          type: type,
+          getClientOffset: () => ({ x: rectX, y: rectY }),
+          getSourceClientOffset: () => ({ x: rectX, y: rectY })
+        };
+
+        props.addPositionOfSignature(textInputItem, monitor, {
+          customPosition: {
+            xPosition,
+            yPosition,
+            width: widgetWidth,
+            height: widgetHeight
+          }
+        });
+        // Mark that a widget was just drawn so the subsequent click event
+        // does not deselect it via the Document onClick handler.
+        justDrewRef.current = true;
+      }
+    }
+
+    // Reset drawing state
+    isDrawingRef.current = false;
+    drawStartRef.current = null;
+    drawEndRef.current = null;
+    setIsDrawing(false); // single setState to unmount the overlay div
+  };
   return (
     <>
       {props.successEmail && (
@@ -340,13 +475,28 @@ function RenderPdf(props) {
           }
           style={{
             width:
-              props.containerWH?.width && props.containerWH?.width * props.scale
+              props.containerWH?.width &&
+              props.containerWH?.width * props.scale,
+            cursor:
+              props.placeholder &&
+              !props.currWidgetsDetails?.key &&
+              !props.isDragging
+                ? "crosshair"
+                : "default"
           }}
           ref={(node) => {
             pdfContainerRef.current = node;
             drop && drop(node);
           }}
           id="container"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={() => {
+            if (isDrawing) {
+              handlePointerUp();
+            }
+          }}
         >
           {props.pdfLoad !== false &&
             props.containerWH?.width &&
@@ -515,6 +665,10 @@ function RenderPdf(props) {
               props.pageDetails(pdf);
             }}
             onClick={() => {
+              if (justDrewRef.current) {
+                justDrewRef.current = false;
+                return;
+              }
               props.setCurrWidgetsDetails && props.setCurrWidgetsDetails({});
               showGuidelines(false);
             }}
@@ -561,6 +715,23 @@ function RenderPdf(props) {
             containerWH={props.containerWH}
             scale={props?.scale}
           />
+          {/* Drawing rectangle overlay for Text Input widget */}
+          {isDrawing && (
+            <div
+              ref={drawingOverlayRef}
+              style={{
+                position: "absolute",
+                left: "0px",
+                top: "0px",
+                width: "0px",
+                height: "0px",
+                border: "2px dashed #007bff",
+                backgroundColor: "rgba(0, 123, 255, 0.1)",
+                pointerEvents: "none",
+                zIndex: 9999
+              }}
+            />
+          )}
         </div>
       </RSC>
     </>

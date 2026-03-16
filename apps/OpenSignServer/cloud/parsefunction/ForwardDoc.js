@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { appName, cloudServerUrl, serverAppId } from '../../Utils.js';
+import { appName } from '../../Utils.js';
+import sendMailWithAttachment from './sendMailWithAttachment.js';
 
 export default async function forwardDoc(request) {
   try {
@@ -28,9 +28,9 @@ export default async function forwardDoc(request) {
       const docName = _docRes.Name;
       const extUserId = _docRes?.ExtUserPtr?.objectId;
       const TenantAppName = appName;
-      const from = _docRes?.ExtUserPtr?.Email;
-      const replyTo = _docRes?.ExtUserPtr?.Email;
-      const senderName = _docRes?.ExtUserPtr?.Name;
+      const from = _docRes?.SenderName || _docRes?.ExtUserPtr?.Email;
+      const replyTo = _docRes?.SenderMail || _docRes?.ExtUserPtr?.Email;
+      const senderName = _docRes?.SenderName || _docRes?.ExtUserPtr?.Name;
 
       try {
         let mailRes;
@@ -53,15 +53,10 @@ export default async function forwardDoc(request) {
               `<p style='padding:20px;font-family:system-ui;font-size:14px'>A copy of the document <strong>${docName}</strong> is attached to this email. Kindly download the document from the attachment.</p>` +
               `</div></div><div><p>This is an automated email from ${TenantAppName}. For any queries regarding this email, please contact the sender ${replyTo} directly.</p></div></div></body></html>`,
           };
-          mailRes = await axios.post(`${cloudServerUrl}/functions/sendmailv3`, params, {
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Parse-Application-Id': serverAppId,
-              'X-Parse-Master-Key': process.env.MASTER_KEY,
-            },
-          });
+          mailRes = await sendMailWithAttachment(params);
+          // console.log('mailRes', mailRes);
         }
-        return mailRes.data?.result;
+        return mailRes;
       } catch (error) {
         const msg =
           error?.response?.data?.error ||

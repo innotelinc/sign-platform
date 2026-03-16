@@ -110,8 +110,12 @@ async function sendMail(document, publicUrl) {
     year: 'numeric',
   });
   let signerMail = document.Placeholders?.filter(x => x?.Role !== 'prefill');
-  const senderName = document.ExtUserPtr.Name;
-  const senderEmail = document.ExtUserPtr.Email;
+  const senderName = document?.SenderName || document.ExtUserPtr.Name;
+  const senderEmail = document?.SenderMail || document.ExtUserPtr.Email;
+  const from =
+    document?.SenderName || document?.ExtUserPtr?.UseNameAsSender === true
+      ? document.ExtUserPtr.Name
+      : senderEmail;
 
   if (document.SendinOrder) {
     signerMail = signerMail.slice();
@@ -171,7 +175,7 @@ async function sendMail(document, publicUrl) {
         extUserId: document.ExtUserPtr.objectId,
         recipient: existSigner?.Email || signerMail[i].email,
         subject: replaceVar?.subject ? replaceVar?.subject : mailTemplate(mailparam).subject,
-        from: document.ExtUserPtr.Email,
+        from: from,
         replyto: senderEmail || '',
         html: replaceVar?.body ? replaceVar?.body : mailTemplate(mailparam).body,
       };
@@ -215,6 +219,7 @@ async function startBulkSendInBackground(userId, Documents, Ip, parseConfig, typ
     }
     let mailBody = x?.ExtUserPtr?.TenantId?.RequestBody || '';
     let mailSubject = x?.ExtUserPtr?.TenantId?.RequestSubject || '';
+    let EmailEditorType = x?.ExtUserPtr?.TenantId?.EmailEditorType || '';
     return {
       method: 'POST',
       path: '/app/classes/contracts_Document',
@@ -261,12 +266,16 @@ async function startBulkSendInBackground(userId, Documents, Ip, parseConfig, typ
         IsEnableOTP: x?.IsEnableOTP || false,
         IsTourEnabled: x?.IsTourEnabled || false,
         AllowModifications: x?.AllowModifications || false,
+        ...(x?.SenderName ? { SenderName: x?.SenderName } : {}),
+        ...(x?.SenderMail ? { SenderMail: x?.SenderMail } : {}),
+        ...(type === 'bulksend' ? { BulkSendToken: generateId(10) } : {}),
         ...(x?.SignatureType ? { SignatureType: x?.SignatureType } : {}),
         ...(x?.NotifyOnSignatures ? { NotifyOnSignatures: x?.NotifyOnSignatures } : {}),
         ...(x?.Bcc?.length > 0 ? { Bcc: x?.Bcc } : {}),
         ...(x?.RedirectUrl ? { RedirectUrl: x?.RedirectUrl } : {}),
         ...(mailBody ? { RequestBody: mailBody } : {}),
         ...(mailSubject ? { RequestSubject: mailSubject } : {}),
+        ...(EmailEditorType ? { EmailEditorType: EmailEditorType } : {}),
         ...(x?.objectId
           ? {
               TemplateId: {
@@ -294,6 +303,7 @@ async function startBulkSendInBackground(userId, Documents, Ip, parseConfig, typ
         createdAt: response.data[0]?.success?.createdAt,
       };
       deductcount(response.data.length, resExt.id);
+      console.log('here');
       sendMail(updateDocuments, publicUrl); //sessionToken
       return { total: 1, created: 1, failed: 0 };
     }

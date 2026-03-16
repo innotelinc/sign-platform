@@ -24,6 +24,19 @@ const refreshAccessToken = async refreshToken => {
   return response.data.access_token;
 };
 
+const getGmail = async (access_token, displayName) => {
+  try {
+    const res = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+
+    const gmail = res.data.email;
+    return `${displayName} <${gmail}>`;
+  } catch (err) {
+    console.log('gmail retrive error ', err);
+    return displayName;
+  }
+};
 // Function to create a raw email message
 const makeEmail = async (
   to,
@@ -101,7 +114,7 @@ const makeEmail = async (
         }
       } catch (err) {
         attachments = [file];
-        console.log('Err in read certificate sendmailv3', err);
+        console.log('sendMailGmailProvider read certificate error', err);
       }
     }
     const attachmentParts = attachments.map(attachment => {
@@ -166,7 +179,8 @@ export default async function sendMailGmailProvider(_extRes, template) {
 
     try {
       // Construct email message
-      const from = sender || _extRes.Email || 'me';
+      const displayName = sender || _extRes.Email || 'me';
+      const from = await getGmail(access_token, displayName);
       const to = receiver;
       const randomNumber = Math.floor(Math.random() * 5000);
       const testPdf = `test_${randomNumber}.pdf`;
@@ -203,7 +217,7 @@ export default async function sendMailGmailProvider(_extRes, template) {
         try {
           fs.unlinkSync(testPdf);
         } catch (err) {
-          console.log('Err in unlink pdf sendmailv3');
+          console.log('sendMailGmailProvider unlink pdf error');
         }
       }
       return { code: 200, message: 'Email sent successfully' };

@@ -154,7 +154,11 @@ const TemplatePlaceholder = () => {
   const [isNewContact, setIsNewContact] = useState({ status: false, id: "" });
   const [alertMsg, setAlertMsg] = useState({ type: "success", message: "" });
   const [isMailModal, setIsMailModal] = useState(false);
-  const [customizeMail, setCustomizeMail] = useState({ body: "", subject: "" });
+  const [customizeMail, setCustomizeMail] = useState({
+    body: { basic: "", advanced: "" },
+    subject: ""
+  });
+  const [emailEditorType, setEmailEditorType] = useState("basic");
   const [defaultMail, setDefaultMail] = useState({ body: "", subject: "" });
   const [currUserId, setCurrUserId] = useState(false);
   const [documentDetails, setDocumentDetails] = useState();
@@ -220,9 +224,13 @@ const TemplatePlaceholder = () => {
                 subject;
           const userBody =
                 body;
+          const finalBody = userBody || defaultMailBody;
+          const emailEditorType =
+                tenantDetails?.EmailEditorType;
+          setEmailEditorType(emailEditorType?.request || "basic");
           setCustomizeMail({
             subject: userSubject || defaultMailSubject,
-            body: userBody || defaultMailBody
+            body: { basic: finalBody, advanced: finalBody }
           });
           setDefaultMail({ subject: userSubject, body: userBody });
           return filterSignTypes;
@@ -422,11 +430,11 @@ const TemplatePlaceholder = () => {
   });
 
   //function for setting position after drop signature button over pdf
-  const addPositionOfSignature = (item, monitor) => {
-    getSignerPos(item, monitor);
+  const addPositionOfSignature = (item, monitor, customOptions) => {
+    getSignerPos(item, monitor, customOptions);
   };
   // `getSignerPos` is used to get placeholder position when user place it and save it in array
-  const getSignerPos = (item, monitor) => {
+  const getSignerPos = (item, monitor, customOptions) => {
     if (uniqueId) {
       const signer = signersdata.find((x) => x.Id === uniqueId);
       const prefillUser = prefillSigner.find((x) => x.Id === uniqueId);
@@ -450,7 +458,22 @@ const TemplatePlaceholder = () => {
           filterSignerPos,
           placeHolder;
         filterSignerPos = signerPos.find((data) => data.Id === uniqueId);
-        if (item === "onclick") {
+
+        // Handle custom position from drawing (OS-1229)
+        if (customOptions?.customPosition) {
+          ({ dropObj, placeHolder } = utils.createCustomPositionWidget({
+            customPosition: customOptions.customPosition,
+            key,
+            containerScale,
+            posZIndex,
+            dragTypeValue,
+            pageNumber,
+            owner,
+            signerPlaceHolder: filterSignerPos?.placeHolder,
+            roleName
+          }));
+          dropData = placeHolder.pos;
+        } else if (item === "onclick") {
           // `getBoundingClientRect()` is used to get accurate measurement width, height of the Pdf div
           const divWidth = divRef.current.getBoundingClientRect().width;
           const divHeight = divRef.current.getBoundingClientRect().height;
@@ -2020,6 +2043,7 @@ const TemplatePlaceholder = () => {
                     unSignedWidgetId={unSignedWidgetId}
                     currWidgetsDetails={currWidgetsDetails}
                     setRoleName={setRoleName}
+                    roleName={roleName}
                     isShowModal={isShowModal}
                     signBtnPosition={signBtnPosition}
                     addPositionOfSignature={addPositionOfSignature}
@@ -2216,6 +2240,8 @@ const TemplatePlaceholder = () => {
         handleShareList={handleShareList}
         setDocumentDetails={setDocumentDetails}
         copyUrlRef={copyUrlRef}
+        emailEditorType={emailEditorType}
+        setEmailEditorType={setEmailEditorType}
       />
       <ModalUi
         isOpen={isSend}
@@ -2313,16 +2339,13 @@ const TemplatePlaceholder = () => {
               currUserId &&
               pdfDetails[0]?.SendinOrder && (
                 <div
-                  className="op-btn op-btn-outline w-[50%] md:w-[35%] mt-1"
+                  className="op-btn op-btn-outline w-[50%] md:w-[35%] mt-1 group"
                   onClick={() => {
                     setIsSend(false);
                     setIsMailModal(true);
                   }}
                 >
-                  <i
-                    className="fa-regular fa-envelope"
-                    style={{ color: "#002864", fontSize: "19px" }}
-                  ></i>{" "}
+                  <i className="fa-regular fa-envelope text-[19px] op-text-primary group-hover:text-base-100 "></i>{" "}
                   <span>{t("send-to-email")}</span>
                 </div>
               )}

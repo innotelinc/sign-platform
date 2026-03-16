@@ -25,6 +25,7 @@ const Report = () => {
   const [isMoreDocs, setIsMoreDocs] = useState(true);
   const [tourData, setTourData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [signerStatusFilter, setSignerStatusFilter] = useState("all");
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [isSearchResult, setIsSearchResult] = useState(false);
   const [allColumns, setAllColumns] = useState([]);
@@ -34,6 +35,7 @@ const Report = () => {
   const [isColumnModal, setIsColumnModal] = useState(false);
   const [searchLoader, setSearchLoader] = useState(false);
   const debounceTimer = useRef(null);
+  const hasMountedSignerFilter = useRef(false);
   const searchAbortRef = useRef(null); // holds AbortController
   // Number of documents to display per page (should always be half of docLimit for proper pagination)
   const docPerPage = 10;
@@ -46,6 +48,7 @@ const Report = () => {
     setReportName("");
     setList([]);
     setSearchTerm("");
+    setSignerStatusFilter("all");
     setMobileSearchOpen(false);
     const saved = JSON.parse(localStorage.getItem("reportColumns") || "{}");
     if (saved[id]) {
@@ -80,6 +83,29 @@ const Report = () => {
     // eslint-disable-next-line
   }, [isNextRecord]);
 
+  useEffect(() => {
+    if (!hasMountedSignerFilter.current) {
+      hasMountedSignerFilter.current = true;
+      return;
+    }
+    setList([]);
+    setIsNextRecord(false);
+    setIsMoreDocs(true);
+    getDocumentbyUserStatus();
+    // eslint-disable-next-line
+  }, [signerStatusFilter]);
+
+  const getDocumentbyUserStatus = async () => {
+    setSearchLoader(true);
+    try {
+      await getReportData(0, docLimit, searchTerm, signerStatusFilter);
+    } catch (error) {
+      console.error("get report by user status error", error);
+    } finally {
+      setSearchLoader(false);
+    }
+  };
+
   const handleSearchChange = withSessionValidation(async (e) => {
     const term = e.target.value.toLowerCase();
     setSearchTerm(term);
@@ -106,7 +132,13 @@ const Report = () => {
         const url = `${localStorage.getItem("baseUrl")}functions/getReport`;
         const res = await axios.post(
           url,
-          { reportId: id, searchTerm: term, skip: 0, limit: docPerPage },
+          {
+            reportId: id,
+            searchTerm: term,
+            signerStatus: signerStatusFilter,
+            skip: 0,
+            limit: docPerPage
+          },
           { headers: headers, signal: controller.signal } // ✅ axios abort
         );
         // if you want to be extra safe (ignore late responses)
@@ -147,7 +179,12 @@ const Report = () => {
     };
   }, []);
   const getReportData = withSessionValidation(
-    async (skipUserRecord = 0, limit = 20, term = searchTerm) => {
+    async (
+      skipUserRecord = 0,
+      limit = 20,
+      term = searchTerm,
+      signerStatus = signerStatusFilter
+    ) => {
       // setIsLoader(true);
       const json = reportJson(id);
       if (json) {
@@ -180,6 +217,9 @@ const Report = () => {
           const params = { reportId: id, skip: skipRecord, limit: limitRecord };
           if (term) {
             params.searchTerm = term;
+          }
+          if (signerStatus && signerStatus !== "all") {
+            params.signerStatus = signerStatus;
           }
           const url = `${localStorage.getItem("baseUrl")}functions/getReport`;
           const res = await axios.post(url, params, {
@@ -271,6 +311,8 @@ const Report = () => {
     isSearchResult,
     columnLabels,
     searchLoader,
+    signerStatusFilter,
+    handleSignerStatusFilter: setSignerStatusFilter,
     openColumnModal: () => setIsColumnModal(true)
   };
   return (

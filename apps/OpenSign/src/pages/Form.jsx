@@ -401,6 +401,10 @@ const Forms = (props) => {
                 "RequestSubject",
                 extUserData?.TenantId?.RequestSubject
               );
+              object.set(
+                "EmailEditorType",
+                extUserData?.TenantId?.EmailEditorType
+              );
             }
         }
         if (props.title !== "Sign Yourself") {
@@ -457,6 +461,16 @@ const Forms = (props) => {
           className: "contracts_Users",
           objectId: ExtCls[0].objectId
         });
+        if (extUserData?.UseNameAsSender) {
+          const senderName = extUserData?.Name || "";
+          const senderMail = extUserData?.Email || "";
+          if (senderName) {
+            object.set("SenderName", senderName);
+          }
+          if (senderMail) {
+            object.set("SenderMail", senderMail);
+          }
+        }
         const res = await object.save();
         if (res) {
           setSigners([]);

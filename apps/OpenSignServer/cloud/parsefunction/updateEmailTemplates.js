@@ -24,6 +24,8 @@ export default async function updateEmailTemplates(request) {
         }
       }
     });
+    if (details?.EmailEditorType) extUserRes.set('EmailEditorType', details.EmailEditorType);
+
     const updateExtRes = await extUserRes.save(null, { useMasterKey: true });
     if (updateExtRes) {
       const res = JSON.parse(JSON.stringify(updateExtRes));

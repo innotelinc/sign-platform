@@ -18,6 +18,8 @@ export default function reportJson(id, currentUserId) {
     'Placeholders',
     'TemplateId',
     'ExpiryDate',
+    'SenderName',
+    'SenderMail',
   ];
   const inProgressKeys = [
     ...commanKeys,
@@ -25,8 +27,10 @@ export default function reportJson(id, currentUserId) {
     'SendMail',
     'RequestBody',
     'RequestSubject',
+    'EmailEditorType',
     'ExtUserPtr.TenantId.RequestBody',
     'ExtUserPtr.TenantId.RequestSubject',
+    'ExtUserPtr.TenantId.EmailEditorType',
     'DocSentAt',
   ];
   const filterKeys = [

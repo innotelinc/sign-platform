@@ -16,6 +16,7 @@ export default async function getReport(request) {
   const limit = request.params.limit;
   const skip = request.params.skip;
   const searchTerm = request.params.searchTerm || '';
+  const signerStatus = request.params.signerStatus || '';
 
   const serverUrl = cloudServerUrl; //process.env.SERVER_URL;
   const appId = serverAppId;
@@ -67,13 +68,23 @@ export default async function getReport(request) {
         }
       }
       paramsObj = applySearch({ reportId, baseWhere: paramsObj, searchTerm });
+
+      const clsName = json?.reportClass ? json.reportClass : 'contracts_Document';
+
+      if (clsName === 'contracts_Document' && signerStatus) {
+        const normalizedStatus =
+          signerStatus === 'viewed' ? 'Viewed' : signerStatus === 'signed' ? 'Signed' : '';
+        if (normalizedStatus) {
+          paramsObj = { ...paramsObj, 'AuditTrail.Activity': normalizedStatus };
+        }
+      }
+
       const headers = {
         'Content-Type': 'application/json',
         'X-Parse-Application-Id': appId,
         'X-Parse-Master-Key': masterKey,
       };
 
-      const clsName = json?.reportClass ? json.reportClass : 'contracts_Document';
       const orderBy = '-updatedAt';
       const include = 'AuditTrail.UserPtr,Placeholders.signerPtr,ExtUserPtr.TenantId';
 

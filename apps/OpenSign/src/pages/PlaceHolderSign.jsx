@@ -77,7 +77,11 @@ function PlaceHolderSign() {
   const editorRef = useRef();
   const navigate = useNavigate();
   const [isMailModal, setIsMailModal] = useState(false);
-  const [customizeMail, setCustomizeMail] = useState({ body: "", subject: "" });
+  const [customizeMail, setCustomizeMail] = useState({
+    body: { basic: "", advanced: "" },
+    subject: ""
+  });
+  const [emailEditorType, setEmailEditorType] = useState("basic");
   const [defaultMail, setDefaultMail] = useState({ body: "", subject: "" });
   const [pdfDetails, setPdfDetails] = useState([]);
   const [isMailSend, setIsMailSend] = useState(false);
@@ -196,9 +200,13 @@ function PlaceHolderSign() {
           const userBody =
                 body;
 
+          const finalBody = userBody || defaultMailBody;
+          const emailEditorType =
+                tenantDetails?.EmailEditorType;
+          setEmailEditorType(emailEditorType?.request);
           setCustomizeMail({
             subject: userSubject || defaultMailSubject,
-            body: userBody || defaultMailBody
+            body: { basic: finalBody, advanced: finalBody }
           });
           setDefaultMail({ subject: userSubject, body: userBody });
           return filterSignTypes;
@@ -488,10 +496,10 @@ function PlaceHolderSign() {
     }
   };
   //function for setting position after drop signature button over pdf
-  const addPositionOfSignature = (item, monitor) => {
-    getSignerPos(item, monitor);
+  const addPositionOfSignature = (item, monitor, customOptions) => {
+    getSignerPos(item, monitor, customOptions);
   };
-  const getSignerPos = (item, monitor) => {
+  const getSignerPos = (item, monitor, customOptions) => {
     if (uniqueId) {
       const signer = signersdata.find((x) => x.Id === uniqueId);
       const prefillUser = prefillSigner.find((x) => x.Id === uniqueId);
@@ -516,7 +524,22 @@ function PlaceHolderSign() {
         const widgetHeight =
           defaultWidthHeight(dragTypeValue).height * containerScale;
         //adding and updating drop position in array when user drop signature button in div
-        if (item === "onclick") {
+        
+        // Handle custom position from drawing (OS-1229)
+        if (customOptions?.customPosition) {
+          ({ dropObj, placeHolder } = utils.createCustomPositionWidget({
+            customPosition: customOptions.customPosition,
+            key,
+            containerScale,
+            posZIndex,
+            dragTypeValue,
+            pageNumber,
+            owner,
+            signerPlaceHolder: filterSignerPos?.placeHolder,
+            roleName
+          }));
+          dropData = placeHolder.pos;
+        } else if (item === "onclick") {
           // `getBoundingClientRect()` is used to get accurate measurement width, height of the Pdf div
           const divWidth = divRef.current.getBoundingClientRect().width;
           const divHeight = divRef.current.getBoundingClientRect().height;
@@ -1990,16 +2013,13 @@ function PlaceHolderSign() {
                       pdfDetails[0]?.SendinOrder &&
                       isCurrUser && (
                         <div
-                          className="op-btn op-btn-outline w-[50%] md:w-[35%] mt-1"
+                          className="op-btn op-btn-outline w-[50%] md:w-[35%] mt-1 group"
                           onClick={() => {
                             setIsSend(false);
                             setIsMailModal(true);
                           }}
                         >
-                          <i
-                            className="fa-regular fa-envelope"
-                            style={{ color: "#002864", fontSize: "19px" }}
-                          ></i>{" "}
+                          <i className="fa-regular fa-envelope text-[19px] op-text-primary group-hover:text-base-100 "></i>{" "}
                           <span>{t("send-to-email")}</span>
                         </div>
                       )}
@@ -2165,6 +2185,7 @@ function PlaceHolderSign() {
                     divRef={divRef}
                     currWidgetsDetails={currWidgetsDetails}
                     setRoleName={setRoleName}
+                    roleName={roleName}
                     isShowModal={isShowModal}
                     signBtnPosition={signBtnPosition}
                     addPositionOfSignature={addPositionOfSignature}
@@ -2262,6 +2283,8 @@ function PlaceHolderSign() {
             handleShareList={handleShareList}
             setCurrUserId={setIsCurrUser}
             copyUrlRef={copyUrlRef}
+            emailEditorType={emailEditorType}
+            setEmailEditorType={setEmailEditorType}
           />
         </div>
       )}
