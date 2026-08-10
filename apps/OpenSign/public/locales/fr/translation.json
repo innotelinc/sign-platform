@@ -1599,7 +1599,7 @@
   "access-code-set": "Code d'accès défini",
   "access-code-add": "Ajouter un code d'accès",
   "access-code-help": "Secret optionnel connu uniquement de ce signataire. Il devra le saisir avant de voir ou de signer le document. Communiquez-le au destinataire par un autre canal (téléphone, en personne).",
-  "access-code-placeholder": "Au moins 4 caractères",
+  "access-code-placeholder": "Au moins 6 caractères",
   "access-code-clear": "Effacer",
   "access-code-save": "Enregistrer",
   "access-code-required": "L'expéditeur a attribué un code d'accès à ce destinataire. Saisissez-le pour continuer.",

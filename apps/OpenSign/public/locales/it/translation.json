@@ -1598,7 +1598,7 @@
   "access-code-set": "Codice di accesso impostato",
   "access-code-add": "Aggiungi codice di accesso",
   "access-code-help": "Codice segreto facoltativo noto solo a questo firmatario. Dovrà inserirlo prima di visualizzare o firmare il documento. Comunicalo al destinatario tramite un canale alternativo (telefono, di persona).",
-  "access-code-placeholder": "Almeno 4 caratteri",
+  "access-code-placeholder": "Almeno 6 caratteri",
   "access-code-clear": "Cancella",
   "access-code-save": "Salva",
   "access-code-required": "Il mittente ha assegnato un codice di accesso a questo destinatario. Inseriscilo per continuare.",
