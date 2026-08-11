@@ -1598,7 +1598,7 @@
   "access-code-set": "접속 코드가 설정됨",
   "access-code-add": "접속 코드 추가",
   "access-code-help": "이 서명자만 아는 선택적 비밀번호입니다. 문서를 보거나 서명하기 전에 반드시 입력해야 합니다. 전화 또는 직접 만나서 등 별도의 경로로 수신자에게 전달하세요.",
-  "access-code-placeholder": "4자 이상",
+  "access-code-placeholder": "6자리 이상 숫자",
   "access-code-clear": "지우기",
   "access-code-save": "저장",
   "access-code-required": "발신자가 이 수신자에게 접속 코드를 지정했습니다. 계속하려면 입력하세요.",

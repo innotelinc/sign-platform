@@ -1597,7 +1597,7 @@
   "access-code-set": "Zugangscode festgelegt",
   "access-code-add": "Zugangscode hinzufügen",
   "access-code-help": "Optionales Geheimnis, das nur dieser Unterzeichner kennt. Vor dem Anzeigen oder Unterschreiben des Dokuments wird die Eingabe verlangt. Geben Sie den Code dem Empfänger auf einem anderen Kanal weiter (Telefon, persönlich).",
-  "access-code-placeholder": "Mindestens 4 Zeichen",
+  "access-code-placeholder": "Mindestens 6 Ziffern",
   "access-code-clear": "Löschen",
   "access-code-save": "Speichern",
   "access-code-required": "Der Absender hat diesem Empfänger einen Zugangscode zugewiesen. Geben Sie ihn ein, um fortzufahren.",
