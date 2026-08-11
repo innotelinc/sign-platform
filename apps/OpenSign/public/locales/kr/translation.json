@@ -1594,7 +1594,7 @@
   "remove": "제거",
   "attachement-note": "참고: 이 위젯을 사용하면 서명자가 서명 과정 중에 파일을 업로드할 수 있습니다. 업로드된 파일은 기존 PDF의 마지막에 추가 페이지로 첨부됩니다.",
   "attachments-docx-not-supported": "현재 DOCX 파일 업로드에 문제가 발생하고 있습니다. 다른 지원되는 형식으로 문서를 업로드하시거나 잠시 후 다시 시도해 주세요.",
-   "access-code": "접속 코드",
+  "access-code": "접속 코드",
   "access-code-set": "접속 코드가 설정됨",
   "access-code-add": "접속 코드 추가",
   "access-code-help": "이 서명자만 아는 선택적 비밀번호입니다. 문서를 보거나 서명하기 전에 반드시 입력해야 합니다. 전화 또는 직접 만나서 등 별도의 경로로 수신자에게 전달하세요.",
@@ -1610,5 +1610,7 @@
   "access-code-warning": "문서가 발송된 후에는 이 접속 코드를 변경하거나 검색할 수 없습니다.",
   "copy-access-code": "접속 코드 복사",
   "access-code-upgrade-msg": "접속 코드는 유료 요금제에서만 사용할 수 있습니다. 수신자에게 접속 코드를 추가하려면 요금제를 업그레이드하세요.",
+  "show-access-code": "액세스 코드 표시",
+  "hide-access-code": "액세스 코드 숨기기",
   "already-copied-to-clipboard": "이미 클립보드에 복사됨"
 }

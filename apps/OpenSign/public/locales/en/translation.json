@@ -1610,5 +1610,7 @@
   "access-code-warning": "This access code cannot be changed or retrieved once the document is sent out.",
   "copy-access-code": "Copy access code",
   "access-code-upgrade-msg": "Access codes are available on paid plans only. Upgrade your plan to add access codes for recipients.",
+  "show-access-code": "Show access code",
+  "hide-access-code": "Hide access code",
   "already-copied-to-clipboard": "Already copied to clipboard"
 }

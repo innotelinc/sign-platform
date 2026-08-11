@@ -1603,11 +1603,13 @@
   "access-code-save": "Speichern",
   "access-code-required": "Der Absender hat diesem Empfänger einen Zugangscode zugewiesen. Geben Sie ihn ein, um fortzufahren.",
   "access-code-invalid": "Falscher Zugangscode. Bitte beim Absender nachfragen.",
-  "access-code-too-short": "Der Zugangscode muss mindestens 6 Ziffern lang sein.",
+  "access-code-too-short": "Der Zugangscode muss mindestens 6 Zeichen lang sein.",
   "access-code-verify": "Zugangscode überprüfen",
   "access-code-verified": "Zugangscode verifiziert.",
   "access-code-warning": "Dieser Zugangscode kann nicht geändert oder abgerufen werden, sobald das Dokument versendet wurde.",
   "copy-access-code": "Zugangscode kopieren",
   "access-code-upgrade-msg": "Zugangscodes sind nur in kostenpflichtigen Tarifen verfügbar. Aktualisieren Sie Ihren Tarif, um Zugangscodes für Empfänger hinzuzufügen.",
+  "show-access-code": "Zugangscode anzeigen",
+  "hide-access-code": "Zugangscode ausblenden",
   "already-copied-to-clipboard": "Bereits in die Zwischenablage kopiert"
 }

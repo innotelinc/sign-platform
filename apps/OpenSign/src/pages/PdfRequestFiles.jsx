@@ -1841,7 +1841,7 @@ function PdfRequestFiles(
                       ? "none"
                       : "auto"
                 }}
-                className={`${
+                 className={`${
                       isGuestSignFlow
                       ? "border-[0.5px] border-gray-300"
                       : "op-card"
