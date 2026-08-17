@@ -1,0 +1,104 @@
+OpenSign Deployment Settings
+============================
+
+Application
+-----------
+Application: OpenSign
+Repository: https://github.com/opensignlabs/opensign
+Public domain: https://sign.innotel.us
+Reverse proxy: Nginx Proxy Manager on another server
+Caddy: Not used
+
+OpenSign host endpoints
+-----------------------
+Web client: http://<OPENSIGN_HOST_PRIVATE_IP>:3000
+API:        http://<OPENSIGN_HOST_PRIVATE_IP>:8080
+MongoDB:    Internal Docker network only; not publicly exposed
+
+DNS
+---
+Create an A record:
+  sign.innotel.us -> <NGINX_PROXY_MANAGER_PUBLIC_IP>
+
+Docker commands
+---------------
+Start or update:
+  docker compose pull
+  docker compose up -d
+
+View status:
+  docker compose ps
+
+View logs:
+  docker compose logs -f server client
+
+Nginx Proxy Manager main Proxy Host
+-----------------------------------
+Domain Names: sign.innotel.us
+Scheme: http
+Forward Hostname/IP: <OPENSIGN_HOST_PRIVATE_IP>
+Forward Port: 3000
+Websockets Support: enabled
+SSL: Let's Encrypt certificate for sign.innotel.us
+Force SSL: enabled
+
+Nginx Proxy Manager custom location
+-----------------------------------
+Location: /api/
+Scheme: http
+Forward Hostname/IP: <OPENSIGN_HOST_PRIVATE_IP>
+Forward Port: 8080
+
+Advanced configuration:
+  rewrite ^/api/(.*)$ /$1 break;
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  client_max_body_size 100m;
+  proxy_read_timeout 100s;
+  proxy_send_timeout 100s;
+
+The rewrite converts the public API path /api/app to OpenSign's internal
+Parse API path /app.
+
+Firewall
+--------
+Allow the Nginx Proxy Manager server to connect to:
+  TCP 3000 on the OpenSign host
+  TCP 8080 on the OpenSign host
+
+Do not expose:
+  MongoDB port 27017
+  MongoDB port 27018
+
+OpenSign environment settings
+-----------------------------
+PUBLIC_URL=https://sign.innotel.us
+REACT_APP_SERVERURL=https://sign.innotel.us/api/app
+REACT_APP_APPID=opensign
+GENERATE_SOURCEMAP=false
+APP_ID=opensign
+MONGODB_URI=mongodb://mongo:27017/OpenSignDB
+PARSE_MOUNT=/app
+SERVER_URL=https://sign.innotel.us/api/app
+USE_LOCAL=true
+SMTP_ENABLE=false
+SMTP_PORT=465
+
+The actual production environment file is:
+  .env.prod
+
+The production MASTER_KEY is intentionally not copied into this text file.
+Keep .env.prod private and backed up securely.
+
+Storage
+-------
+MongoDB data volume: sign_data-volume
+Uploaded document volume: sign_opensign-files
+
+Email
+-----
+SMTP is currently disabled. To enable email invitations and notifications,
+edit .env.prod with valid SMTP settings and recreate the containers:
+  docker compose up -d
