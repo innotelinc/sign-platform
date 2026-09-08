@@ -4,8 +4,8 @@ Self-hosted OpenSign deployment for `sign.innotel.us`, using Docker Compose and 
 
 ## Features
 
-- OpenSign web client and API using the official Docker images
-- MongoDB with persistent Docker storage
+- OpenSign web client and API built from the bundled OpenSign source in `apps/`
+- MongoDB 7.0 with persistent Docker storage and a startup healthcheck
 - Persistent document storage on the `opensign-files` volume
 - No Caddy container
 - External HTTPS termination and routing through Nginx Proxy Manager
@@ -18,16 +18,18 @@ Self-hosted OpenSign deployment for `sign.innotel.us`, using Docker Compose and 
 - A DNS `A` record for `sign.innotel.us` pointing to the Nginx Proxy Manager server
 - Firewall access from Nginx Proxy Manager to TCP ports `3000` and `8080` on the OpenSign host
 - MongoDB 7.0 image (`mongo:7.0`). The image is pinned because `mongo:latest` (MongoDB 8.x) fails to start on Linux kernels 6.19+ (known incompatibility, [SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912)) and requires AVX CPU support
+- Internet access on the OpenSign host to download npm dependencies while building the `server` and `client` images
 
 ## Quick start
 
-Create the private environment file from the deployment settings, then start the stack:
+Create the private environment file from the deployment settings, then build and start the stack:
 
 ```bash
-docker compose pull
-docker compose up -d
+docker compose up -d --build
 docker compose ps
 ```
+
+The `server` and `client` images are built from the bundled OpenSign source in `apps/` so that fixes in this repository reach the running stack. The first build downloads npm dependencies and can take several minutes; later builds are incremental.
 
 The local endpoints are:
 
@@ -75,9 +77,8 @@ Never commit `.env.prod`, `MASTER_KEY`, SMTP credentials, storage credentials, o
 ## Operations
 
 ```bash
-# Update images and recreate changed services
-docker compose pull
-docker compose up -d
+# Rebuild images from this repository and recreate changed services
+docker compose up -d --build
 
 # View service status
 docker compose ps
@@ -88,6 +89,10 @@ docker compose logs -f server client
 # Stop the stack without deleting volumes
 docker compose down
 ```
+
+Do not run `docker compose pull` for the `server` and `client` services: it would overwrite the locally built images with the upstream Docker Hub images, losing fixes from this repository. MongoDB is pulled separately by image digest pinned to `mongo:7.0`.
+
+After a code update, rebuild with `docker compose up -d --build` so the running stack picks up the new source. The mongo service has a healthcheck, and the server waits for MongoDB to be healthy before starting.
 
 The named volumes `data-volume` and `opensign-files` contain application data. Do not run `docker compose down -v` unless you intend to delete that data.
 

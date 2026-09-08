@@ -1,13 +1,17 @@
 services:
   server:
     image: opensign/opensignserver:main
+    build:
+      context: .
+      dockerfile: apps/OpenSignServer/Dockerhubfile
     restart: unless-stopped
     volumes:
       - opensign-files:/usr/src/app/files
     ports:
       - "8080:8080"
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
     env_file: .env.prod
     environment:
       NODE_ENV: production
@@ -19,11 +23,20 @@ services:
     restart: unless-stopped
     volumes:
       - data-volume:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - app-network
 
   client:
     image: opensign/opensign:main
+    build:
+      context: .
+      dockerfile: apps/OpenSign/Dockerhubfile
     restart: unless-stopped
     depends_on:
       - server
