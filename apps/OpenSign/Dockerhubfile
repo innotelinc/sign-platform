@@ -7,8 +7,13 @@ WORKDIR /usr/src/app
 # Copy package.json and package-lock.json first to leverage Docker cache
 COPY apps/OpenSign/package*.json ./
 
+# npm 10.x skips optional platform bindings (npm/cli#4828), which breaks the
+# rolldown-powered vite build with "Cannot find native binding". Use npm 11 and
+# install strictly from the lockfile.
+RUN npm install -g npm@11
+
 # Install application dependencies
-RUN npm install
+RUN npm ci
 
 # Copy the current directory contents into the container
 COPY apps/OpenSign/ .
