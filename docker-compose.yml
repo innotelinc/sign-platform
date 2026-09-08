@@ -15,7 +15,7 @@ services:
       - app-network
 
   mongo:
-    image: mongo:latest
+    image: mongo:7.0
     restart: unless-stopped
     volumes:
       - data-volume:/data/db
