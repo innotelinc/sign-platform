@@ -48,7 +48,7 @@ const AddAdmin = () => {
     setState((prev) => ({ ...prev, loading: true }));
     try {
       const app = await getAppLogo();
-      if (app?.error === "invalid_json") {
+      if (app?.error) {
         setErrMsg(t("server-down", { appName: appName }));
       } else if (app?.user === "exist") {
         setErrMsg(t("admin-exists"));

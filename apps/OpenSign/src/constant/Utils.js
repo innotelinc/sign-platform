@@ -2846,11 +2846,9 @@ export const getAppLogo = async () => {
   } catch (err) {
     console.log("err in getlogo ", err);
     localStorage.setItem("favicon", appInfo.fev_Icon);
-    if (err?.message?.includes("valid JSON")) {
-      return { logo: appInfo.applogo, user: "exist", error: "invalid_json" };
-    } else {
-      return { logo: appInfo.applogo, user: "exist" };
-    }
+    // A failure to reach the API must not be reported as "admin already
+    // exists". Let the caller surface the connectivity error instead.
+    return { logo: appInfo.applogo, error: "server_error" };
   }
 };
 export const getTenantDetails = async (objectId, contactId) => {
