@@ -17,6 +17,7 @@ Self-hosted OpenSign deployment for `sign.innotel.us`, using Docker Compose and 
 - A server reachable by Nginx Proxy Manager
 - A DNS `A` record for `sign.innotel.us` pointing to the Nginx Proxy Manager server
 - Firewall access from Nginx Proxy Manager to TCP ports `3000` and `8080` on the OpenSign host
+- MongoDB 7.0 image (`mongo:7.0`). The image is pinned because `mongo:latest` (MongoDB 8.x) fails to start on Linux kernels 6.19+ (known incompatibility, [SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912)) and requires AVX CPU support
 
 ## Quick start
 
