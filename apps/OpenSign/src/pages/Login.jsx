@@ -74,11 +74,9 @@ function Login() {
 
   const checkUserExt = async () => {
     const app = await getAppLogo();
-    if (app?.error === "invalid_json") {
+    if (app?.error) {
       setErrMsg(t("server-down", { appName: appName }));
-    } else if (
-      app?.user === "not_exist"
-    ) {
+    } else if (app?.user === "not_exist") {
       navigate("/addadmin");
     }
     if (app?.logo) {
