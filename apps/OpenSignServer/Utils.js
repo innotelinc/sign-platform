@@ -15,7 +15,10 @@ import { parseUploadFile } from './utils/fileUtils.js';
 
 dotenv.config({ quiet: true });
 
-export const cloudServerUrl = 'http://localhost:8080/app';
+// Internal server URL used for API calls and (in local-storage mode) for
+// building file URLs. Derived from SERVER_URL so files stay reachable at the
+// public address; localhost fallback covers bare local dev.
+export const cloudServerUrl = process.env.SERVER_URL || 'http://localhost:8080/app';
 export const serverAppId = process.env.APP_ID || 'opensign';
 // Brand name used across emails, certificates and PDF watermarks.
 // Overridable via the APP_NAME environment variable so self-hosted
