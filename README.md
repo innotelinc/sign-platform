@@ -68,7 +68,13 @@ SERVER_URL=https://sign.innotel.us/api/app
 MONGODB_URI=mongodb://mongo:27017/OpenSignDB
 PARSE_MOUNT=/app
 USE_LOCAL=true
+REACT_APP_APPNAME=Signara by Innotel
+APP_NAME=Signara by Innotel
 ```
+
+`REACT_APP_APPNAME` (web UI) and `APP_NAME` (emails, certificates) control
+the brand name shown across the platform. Both default to `Signara` when
+empty or unset.
 
 SMTP is disabled by default. Configure SMTP credentials in `.env.prod` before using email invitations or notifications.
 

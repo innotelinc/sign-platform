@@ -10,6 +10,7 @@ import "./polyfills";
 import { serverUrl_fn } from "./constant/appinfo";
 import "./i18n";
 import { ScrollProvider } from "./context/ScrollPdfContext";
+import ErrorBoundary from "./primitives/ErrorBoundary";
 
 const appId =
   import.meta.env.VITE_APPID || process.env.REACT_APP_APPID || "opensign";
@@ -29,11 +30,13 @@ if (savedTheme === "dark") {
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
-  <Provider store={store}>
-    <ScrollProvider>
-      <App />
-    </ScrollProvider>
-  </Provider>
+  <ErrorBoundary>
+    <Provider store={store}>
+      <ScrollProvider>
+        <App />
+      </ScrollProvider>
+    </Provider>
+  </ErrorBoundary>
 );
 
 hideUpgradeProgress();
