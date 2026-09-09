@@ -1,3 +1,4 @@
+import { APP_NAME } from "../../constant/Utils";
 import {
   useState,
   useEffect,
@@ -47,8 +48,7 @@ const ALL_EXCLUDED_TYPES = new Set([
 
 const BulkSendUi = (props) => {
   const { t } = useTranslation();
-  const appName =
-    "OpenSign™";
+  const appName = APP_NAME;
   const dispatch = useDispatch();
   const { isBulkLoader } = useSelector((state) => state.widget);
   const [forms, setForms] = useState([]);

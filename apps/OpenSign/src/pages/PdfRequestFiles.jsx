@@ -1,3 +1,4 @@
+import { APP_NAME } from "../constant/Utils";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { PDFDocument } from "pdf-lib";
 import "../styles/signature.css";
@@ -84,8 +85,7 @@ function PdfRequestFiles(
   const isShowModal = useSelector((state) => state.widget.isShowModal);
   const defaultSignImg = useSelector((state) => state.widget.defaultSignImg);
   const myInitial = useSelector((state) => state.widget.myInitial);
-  const appName =
-    "OpenSign™";
+  const appName = APP_NAME;
   const [pdfDetails, setPdfDetails] = useState([]);
   const [signedSigners, setSignedSigners] = useState([]);
   const [unsignedSigners, setUnSignedSigners] = useState([]);
@@ -721,6 +721,8 @@ function PdfRequestFiles(
               const arrayBuffer = await convertPdfArrayBuffer(url);
               if (arrayBuffer === "Error") {
                 setHandleError("Error: invalid document!");
+                setIsUiLoading(false);
+                return;
               } else {
                 pdfArrBuffer = arrayBuffer;
               }
@@ -750,8 +752,14 @@ function PdfRequestFiles(
               } else {
                 setHandleError(t("something-went-wrong-mssg"));
               }
+              setIsUiLoading(false);
+              // Stop here - otherwise the code continues with an undefined pdf
+              // buffer and crashes with a generic "something went wrong".
+              return;
             } else {
               setHandleError("Document not Found!");
+              setIsUiLoading(false);
+              return;
             }
             try {
               const pdfDoc = await PDFDocument.load(pdfArrBuffer);
@@ -908,7 +916,8 @@ function PdfRequestFiles(
                           title: documentName,
                           organization: orgName,
                           localExpireDate: localExpireDate,
-                          signingUrl: signPdf
+                          signingUrl: signPdf,
+                          hostUrl: window.location.origin
                         };
                         let params = {
                           replyto: senderEmail || "",
@@ -964,16 +973,19 @@ function PdfRequestFiles(
               }
             } catch (err) {
               setIsUiLoading(false);
-              if (err && err.message.includes("is encrypted.")) {
+              console.log("err in request signing", err);
+              if (err && err?.message?.includes("is encrypted.")) {
                 setIsAlert({
                   isShow: true,
                   alertMessage: t("encrypted-pdf-not-support")
                 });
               } else {
-                console.log("err in request signing", err);
                 setIsAlert({
                   isShow: true,
-                  alertMessage: t("something-went-wrong-mssg")
+                  // surface the real reason (e.g. server/certificate errors)
+                  // instead of only a generic message
+                  alertMessage:
+                    err?.message || t("something-went-wrong-mssg")
                 });
               }
             }
@@ -990,7 +1002,9 @@ function PdfRequestFiles(
         setIsUiLoading(false);
         setIsAlert({
           isShow: true,
-          alertMessage: t("something-went-wrong-mssg")
+          // surface the real reason (e.g. font/file fetch failures) instead of
+          // only a generic message
+          alertMessage: err?.message || t("something-went-wrong-mssg")
         });
       }
     }

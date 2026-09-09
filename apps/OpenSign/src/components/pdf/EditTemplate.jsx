@@ -1,3 +1,4 @@
+import { APP_NAME } from "../../constant/Utils";
 import {
   useState,
   useRef,
@@ -30,8 +31,7 @@ const EditTemplate = ({
   setPdfBase64Url,
   isAddYourSelfCheckbox,
 }) => {
-  const appName =
-    "OpenSign™";
+  const appName = APP_NAME;
   const { t } = useTranslation();
   const inputFileRef = useRef(null);
   const [formData, setFormData] = useState({

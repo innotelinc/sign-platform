@@ -1,3 +1,4 @@
+import { APP_NAME } from "../constant/Utils";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { formJson } from "../json/FormJson";
@@ -50,8 +51,7 @@ function Form() {
 }
 
 const Forms = (props) => {
-  const appName =
-    "OpenSign™";
+  const appName = APP_NAME;
   const { t } = useTranslation();
   const abortController = new AbortController();
   const inputFileRef = useRef(null);

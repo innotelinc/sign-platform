@@ -1,3 +1,4 @@
+import { APP_NAME } from "../constant/Utils";
 import { useEffect, useState } from "react";
 import Parse from "parse";
 import { appInfo } from "../constant/appinfo";
@@ -15,8 +16,7 @@ import { useTranslation } from "react-i18next";
 import { emailRegex } from "../constant/const";
 
 const AddAdmin = () => {
-  const appName =
-    "OpenSign™";
+  const appName = APP_NAME;
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();

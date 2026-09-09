@@ -5,10 +5,10 @@ import { PDFDocument } from 'pdf-lib';
 import fs from 'node:fs';
 import dotenv from 'dotenv';
 import GenerateCertificate from './pdf/GenerateCertificate.js';
-import { getSecureUrl } from '../../Utils.js';
+import { getSecureUrl, appName } from '../../Utils.js';
 import { parseUploadFile } from '../../utils/fileUtils.js';
 dotenv.config({ quiet: true });
-const eSignName = 'OpenSign';
+const eSignName = appName.replace('™', '');
 const eSigncontact = 'hello@opensignlabs.com';
 
 // `uploadFile` is used to create url in from pdfFile

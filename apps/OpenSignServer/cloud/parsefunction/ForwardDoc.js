@@ -7,6 +7,7 @@ export default async function forwardDoc(request) {
       throw new Parse.Error(Parse.Error.INVALID_SESSION_TOKEN, 'unauthorized.');
     }
     const { docId, recipients } = request.params;
+    const publicUrl = request.headers.public_url;
     const isReceipents = recipients?.length > 0 && recipients?.length <= 10;
     if (docId && isReceipents) {
       const userPtr = { __type: 'Pointer', className: '_User', objectId: request.user.id };
@@ -35,7 +36,7 @@ export default async function forwardDoc(request) {
       try {
         let mailRes;
         for (let i = 0; i < recipients.length; i++) {
-          const logo = `<img src='https://qikinnovation.ams3.digitaloceanspaces.com/logo.png' height='50' style='padding:20px'/>`;
+          const logo = `<img src='${publicUrl}/public/logo.png' height='50' style='padding:20px'/>`;
 
           const themeColor = '#47a3ad';
 

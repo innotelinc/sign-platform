@@ -1,3 +1,4 @@
+import { APP_NAME } from "../constant/Utils";
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { lazyWithRetry, withSessionValidation } from "../utils";
 import "../styles/opensigndrive.css";
@@ -29,9 +30,8 @@ const AppLoader = () => {
   );
 };
 function Opensigndrive() {
-  const appName =
-    "OpenSign™";
-  const drivename = appName === "OpenSign™" ? "OpenSign™" : "";
+  const appName = APP_NAME;
+  const drivename = appName;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const scrollRef = useRef(null);

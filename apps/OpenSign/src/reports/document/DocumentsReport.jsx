@@ -1,3 +1,4 @@
+import { APP_NAME } from "../../constant/Utils";
 import React, { useState, useEffect, useRef } from "react";
 import pad from "../../assets/images/pad.svg";
 import recreatedoc from "../../assets/images/recreatedoc.png";
@@ -42,8 +43,7 @@ const DocumentsReport = (props) => {
   const copyUrlRef = useRef(null);
   const titleRef = useRef(null);
   const titleElement = useElSize(titleRef);
-  const appName =
-    "OpenSign™";
+  const appName = APP_NAME;
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();

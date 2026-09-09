@@ -1,3 +1,4 @@
+import { APP_NAME } from "../constant/Utils";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { PDFDocument } from "pdf-lib";
 import "../styles/signature.css";
@@ -85,8 +86,7 @@ function SignYourSelf() {
   const windowSize = useWindowSize();
   const { scrollRef } = useScroll();
   const isShowModal = useSelector((state) => state.widget.isShowModal);
-  const appName =
-    "OpenSign™";
+  const appName = APP_NAME;
   const divRef = useRef(null);
   const nodeRef = useRef(null);
   const pdfRef = useRef();
@@ -718,17 +718,16 @@ function SignYourSelf() {
                 alertMessage: t("pdf-uncompatible", { appName: appName })
               });
             }
-          } catch (err) {
-            setIsUiLoading(false);
-            if (err && err.message.includes("is encrypted.")) {
-              setIsAlert({
-                header: t("error"),
-                isShow: true,
-                alertMessage: t("encrypted-pdf-alert")
-              });
-            } else {
-              console.log("err in signing", err.message);
-              if (err?.message?.includes("password")) {
+            } catch (err) {
+              setIsUiLoading(false);
+              console.log("err in signing", err?.message);
+              if (err && err?.message?.includes("is encrypted.")) {
+                setIsAlert({
+                  header: t("error"),
+                  isShow: true,
+                  alertMessage: t("encrypted-pdf-alert")
+                });
+              } else if (err?.message?.includes("password")) {
                 setIsAlert({
                   header: t("error"),
                   isShow: true,
@@ -738,11 +737,11 @@ function SignYourSelf() {
                 setIsAlert({
                   header: t("error"),
                   isShow: true,
-                  alertMessage: t("something-went-wrong-mssg")
+                  // surface the real reason instead of only a generic message
+                  alertMessage: err?.message || t("something-went-wrong-mssg")
                 });
               }
             }
-          }
         }
       } catch (err) {
         console.log("err in embedselfsign ", err);

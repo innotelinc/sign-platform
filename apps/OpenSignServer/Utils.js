@@ -17,7 +17,10 @@ dotenv.config({ quiet: true });
 
 export const cloudServerUrl = 'http://localhost:8080/app';
 export const serverAppId = process.env.APP_ID || 'opensign';
-export const appName = 'OpenSign™';
+// Brand name used across emails, certificates and PDF watermarks.
+// Overridable via the APP_NAME environment variable so self-hosted
+// deployments can rebrand without code changes. Falls back to "Signara".
+export const appName = process.env.APP_NAME || 'Signara';
 export const prefillDraftDocWidget = ['date', 'textbox', 'checkbox', 'radio button', 'image'];
 export const prefillDraftTemWidget = [
   'date',
@@ -669,7 +672,10 @@ export const mailTemplate = param => {
   const themeColor = '#47a3ad';
   const subject = `${param.senderName} has requested you to sign "${param.title}"`;
   const AppName = appName;
-  const logo = `<img src='https://qikinnovation.ams3.digitaloceanspaces.com/logo.png' height='50' />`;
+  // param.hostUrl is the browser origin passed by the caller; fall back to the
+  // configured server URL so the logo resolves in every deployment.
+  const logoBase = param.hostUrl || cloudServerUrl.replace(/\/app\/?$/, '');
+  const logo = `<img src='${logoBase}/public/logo.png' height='50' />`;
 
   const body =
     "<html><head><meta http-equiv='Content-Type' content='text/html;charset=UTF-8' /></head><body><div style='background-color:#f5f5f5;padding:20px'><div style='background:white;padding-bottom:20px'><div style='padding:10px'>" +

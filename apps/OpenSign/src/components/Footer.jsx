@@ -1,10 +1,11 @@
+import { APP_NAME } from "../constant/Utils";
 import React, { useEffect, useState } from "react";
 import Package from "../../package.json";
 import axios from "axios";
 import { openInNewTab } from "../constant/Utils";
 import { useTranslation } from "react-i18next";
 const Footer = () => {
-  const appName = "OpenSign™";
+  const appName = APP_NAME;
   const { t } = useTranslation();
   const [showButton, setShowButton] = useState(false);
   const [version, setVersion] = useState("");

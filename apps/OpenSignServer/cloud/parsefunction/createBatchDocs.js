@@ -179,6 +179,7 @@ async function sendMail(document, publicUrl) {
         organization: orgName,
         localExpireDate: localExpireDate,
         signingUrl: signPdf,
+        hostUrl: hostUrl,
       };
       let params = {
         extUserId: document.ExtUserPtr.objectId,

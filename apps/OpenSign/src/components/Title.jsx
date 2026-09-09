@@ -1,3 +1,4 @@
+import { APP_NAME } from "../constant/Utils";
 import { useLocation, matchPath } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useMemo } from "react";
@@ -57,8 +58,7 @@ function resolveTitle(pathname, override) {
 export default function Title() {
   const { pathname, state } = useLocation();
   const { t } = useTranslation();
-  const appName =
-    "OpenSign™";
+  const appName = APP_NAME;
   const logo = useMemo(() => localStorage.getItem("favicon"), []);
   const prefix = useMemo(
     () => resolveTitle(pathname, state?.title),

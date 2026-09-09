@@ -1,3 +1,4 @@
+import { APP_NAME } from "../../constant/Utils";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import Parse from "parse";
@@ -13,8 +14,7 @@ const MailTemplateEditor = ({
   info,
   tenantId,
 }) => {
-  const appName =
-    "OpenSign™";
+  const appName = APP_NAME;
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [requestBody, setRequestBody] = useState({ basic: "", advanced: "" });

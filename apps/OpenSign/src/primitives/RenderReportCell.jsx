@@ -1,3 +1,4 @@
+import { APP_NAME } from "../constant/Utils";
 import { useTranslation } from "react-i18next";
 import { formatDateToDdMmmYyyy } from "../constant/Utils";
 import SignerCell from "./SignerCell";
@@ -36,9 +37,8 @@ export const RenderReportCell = ({
   handleItemClick
 }) => {
   const { t } = useTranslation();
-  const appName =
-    "OpenSign™";
-  const drivename = appName === "OpenSign™" ? "OpenSign™" : "";
+  const appName = APP_NAME;
+  const drivename = appName;
   switch (col) {
     case "Sr.No":
       return (
